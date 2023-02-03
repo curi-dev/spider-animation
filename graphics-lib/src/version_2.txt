@@ -1,0 +1,66 @@
+ pub fn render(&self) {
+        let curr_program = &self.programs[0]; // error handling (?)
+        self.context.use_program(Some(curr_program));
+
+        self.context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+
+        
+        let position_attrib_location = self.context.get_attrib_location(curr_program, "aPosition");
+        let color_attr_location = self.context.get_attrib_location(&curr_program, "uColors");
+        //let uniform_color_location = self.context.get_uniform_location(&curr_program, "uColor").unwrap();
+
+
+        let position_buffer = self.context.create_buffer().ok_or("Failed to create the positions buffer").unwrap(); 
+        //self.context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&position_buffer));
+        let color_buffer = self.context.create_buffer().ok_or("Failed to create the colors buffer").unwrap();
+
+        let memory_buffer = wasm_bindgen::memory() // what exactly is this memory from wasm_bindgen?
+        .dyn_into::<WebAssembly::Memory>()
+        .unwrap()
+        .buffer();
+
+
+        self.context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&position_buffer));
+        self.set_new_triangle(&self.storage_positions, &memory_buffer);
+
+        self.context.vertex_attrib_pointer_with_i32(
+            position_attrib_location as u32, 
+            2, 
+            WebGlRenderingContext::FLOAT, 
+            false, 
+            0, 
+            0
+            // ARRAY_BUFFER = position_buffer
+        );
+        
+        self.context.enable_vertex_attrib_array(position_attrib_location as u32);
+
+        let mut vert_colors = Vec::new();
+        for _triangle in 0..60 {
+            let r = ((quad_rand::gen_range(0.5, 1.) as f32) * 2. - 1.) as f32;
+            let g = ((quad_rand::gen_range(0.5, 1.) as f32) * 2. - 1.) as f32;
+            let b = ((quad_rand::gen_range(0.5, 1.) as f32) * 2. - 1.) as f32;
+
+            vert_colors.push(r);
+            vert_colors.push(g);
+            vert_colors.push(b);
+        }
+        
+        self.context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&color_buffer));
+        self.set_new_triangle(&vert_colors, &memory_buffer);
+
+        self.context.vertex_attrib_pointer_with_i32(
+            color_attr_location as u32,
+            3,
+            WebGlRenderingContext::FLOAT,
+            false,
+            0,
+            0
+            // ARRAY_BUFFER = color_buffer
+        );
+
+        self.context.enable_vertex_attrib_array(color_attr_location as u32);
+
+        self.draw(self.storage_positions.len() as i32 / 2);
+
+    }

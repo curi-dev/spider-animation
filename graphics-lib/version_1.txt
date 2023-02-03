@@ -1,0 +1,164 @@
+use std::panic;
+//use std::sync::Arc;
+// use std::thread;
+// use std::time::Duration;
+
+use console_error_panic_hook;
+use js_sys::WebAssembly;
+use wasm_bindgen::{prelude::*, JsCast};
+use web_sys::{WebGlProgram, WebGlRenderingContext};
+//use quad_rand as qrand;
+
+mod shaders;
+mod setup;
+mod programs;
+
+use setup::initialize_webgl_context;
+use programs::base::ProgramBuilder;
+
+
+
+#[wasm_bindgen]
+extern "C" {
+    fn alert(s: &str);
+
+    fn log(s: &str);
+}
+
+#[wasm_bindgen]
+pub fn welcome(name: &str) {
+    alert(&format!("Hello {}, from Rustlang! ", name));
+}
+
+#[wasm_bindgen]
+pub fn console_log(text: &str) {
+    log(text);
+}
+
+#[wasm_bindgen]
+pub struct GraphicsClient {
+    context: WebGlRenderingContext,
+    programs: Vec<WebGlProgram>,
+}
+
+unsafe impl Send for GraphicsClient {}
+
+#[wasm_bindgen]
+impl GraphicsClient {
+
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        panic::set_hook(Box::new(console_error_panic_hook::hook));
+
+        let context = initialize_webgl_context().unwrap(); // deep into problems (Err)
+
+        let mut programs = Vec::new();
+        programs.push(ProgramBuilder::build(&context)); 
+         
+        Self { 
+            context, 
+            programs
+        }
+    }
+
+    // pub fn update_triangles(&mut self) {
+    //     for _axis in 0..2 {
+    //         println!("adding a new position");
+    //         let coord = qrand::gen_range(0., 1.) as f32 * 2. - 1.;
+    //         self.trace_positions.push(coord);
+    //     };
+    // }
+    
+
+    pub fn render(&self) {
+        let curr_program = &self.programs[0]; // error handling (?)
+        self.context.use_program(Some(curr_program));
+
+        self.context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+
+        
+        let position_attrib_location = self.context.get_attrib_location(curr_program, "aPosition");
+        let color_attr_location = self.context.get_attrib_location(&curr_program, "uColors");
+        //let uniform_color_location = self.context.get_uniform_location(&curr_program, "uColor").unwrap();
+
+
+        let position_buffer = self.context.create_buffer().ok_or("Failed to create the positions buffer").unwrap(); 
+        //self.context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&position_buffer));
+        let color_buffer = self.context.create_buffer().ok_or("Failed to create the colors buffer").unwrap();
+
+        let memory_buffer = wasm_bindgen::memory() // what exactly is this memory from wasm_bindgen?
+        .dyn_into::<WebAssembly::Memory>()
+        .unwrap()
+        .buffer();
+
+        let mut vert_positions = Vec::new();
+        for _triangle in 0..60 {
+            let x = ((quad_rand::gen_range(0., 1.) as f32) * 2. - 1.) as f32;
+            let y = ((quad_rand::gen_range(0., 1.) as f32) * 2. - 1.) as f32;
+
+            vert_positions.push(x);
+            vert_positions.push(y);
+        }
+
+        self.context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&position_buffer));
+        self.set_new_triangle(&vert_positions, &memory_buffer);
+
+        self.context.vertex_attrib_pointer_with_i32(
+            position_attrib_location as u32, 
+            2, 
+            WebGlRenderingContext::FLOAT, 
+            false, 
+            0, 
+            0
+            // ARRAY_BUFFER = position_buffer
+        );
+        
+        self.context.enable_vertex_attrib_array(position_attrib_location as u32);
+
+        let mut vert_colors = Vec::new();
+        for _triangle in 0..60 {
+            let r = ((quad_rand::gen_range(0.5, 1.) as f32) * 2. - 1.) as f32;
+            let g = ((quad_rand::gen_range(0.5, 1.) as f32) * 2. - 1.) as f32;
+            let b = ((quad_rand::gen_range(0.5, 1.) as f32) * 2. - 1.) as f32;
+
+            vert_colors.push(r);
+            vert_colors.push(g);
+            vert_colors.push(b);
+        }
+        
+        self.context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&color_buffer));
+        self.set_new_triangle(&vert_colors, &memory_buffer);
+
+        self.context.vertex_attrib_pointer_with_i32(
+            color_attr_location as u32,
+            3,
+            WebGlRenderingContext::FLOAT,
+            false,
+            0,
+            0
+            // ARRAY_BUFFER = color_buffer
+        );
+
+        self.context.enable_vertex_attrib_array(color_attr_location as u32);
+
+        self.draw(vert_positions.len() as i32 / 2);
+
+    }
+
+    fn set_new_triangle(&self, positions: &[f32], memory_buffer: &JsValue) {
+        let vertices_location = (positions.as_ptr() as usize / 4) as u32;
+        let vertex_arr = js_sys::Float32Array::new(&memory_buffer)
+            .subarray(vertices_location, vertices_location + positions.len() as u32);
+            
+        self.context.buffer_data_with_array_buffer_view(WebGlRenderingContext::ARRAY_BUFFER, &vertex_arr, WebGlRenderingContext::STATIC_DRAW);
+    }
+
+    fn draw(&self, vert_count: i32) {
+        self.context.draw_arrays(WebGlRenderingContext::TRIANGLES, 0, vert_count);
+    }
+}
+
+
+
+
+
