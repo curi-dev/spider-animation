@@ -7,7 +7,9 @@ pub struct Spider {
     pub move_range: Range<f32>,
     pub upper_and_middle_legs_data: [f32; 108],
     pub bottom_legs_data: [f32; 90],
-    pub colors: [u8; 108]
+    pub colors: [u8; 108],
+    pub speed: f32,
+    pub z_acc_rotation: f32, // for front legs
 }
 
 impl Spider {
@@ -15,8 +17,10 @@ impl Spider {
         let apex: (f32, f32, f32) = (26., 5., 1.5); 
 
         Self { 
-            legs_direction: LegsDirection::Front, 
+            legs_direction: LegsDirection::Front,
+            speed: 10., 
             move_range:  Range { start: 0., end: 11. },
+            z_acc_rotation: 0.,
             upper_and_middle_legs_data: [
                 // front side face          
                 0., 0., 0.,
@@ -172,7 +176,8 @@ impl Spider {
         
         }
     }
-    pub fn change_direction(&mut self) {
+
+    fn change_direction(&mut self) {
         
         match self.legs_direction {
             LegsDirection::Back => self.legs_direction = LegsDirection::Front,
@@ -180,16 +185,30 @@ impl Spider {
         }
     }
 
-    pub fn animate_front_legs(&mut self) {
+    pub fn animate_front_legs(&mut self, deltatime: f32) {     
+        let mut displacement: f32 = self.speed * deltatime; // angle_displacement
+                        
+        if self.legs_direction == LegsDirection::Back {
+            displacement *= -1.;
+        }
+        
+        self.z_acc_rotation += displacement;
 
+        if !self.move_range.contains(&self.z_acc_rotation) {
+            self.change_direction();
+        }
     }
 
     pub fn animate_middle_legs(&mut self) {
-
+        println!("animate middle legs");
     }
 
     pub fn animate_back_legs(&mut self) {
+        println!("animate back legs");
+    }
 
+    pub fn animate_body(&mut self) {
+        println!("animate body");
     }
 }
 

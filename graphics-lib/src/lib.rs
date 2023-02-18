@@ -171,18 +171,11 @@ impl GraphicsClient {
                 //z_rotation_angle = *self.z_rotation_ptr.try_borrow().unwrap();
             },
             false => {
-                let deltatime = 0.026;
-                let mut displacement: f32 = self.speed * deltatime; // angle_displacement
-                               
-                if self.spider.legs_direction == LegsDirection::Back {
-                    displacement *= -1.;
-                }
+                self.spider.animate_front_legs(0.026); // all transformations here
                 
-                self.z_rotation_acc += displacement;
+                //self.spider.animate_back_legs(0.026);
 
-                if !self.spider.move_range.contains(&self.z_rotation_acc) {
-                    self.spider.change_direction();
-                }
+                //self.spider.animate_middle_legs(0.026);
             },   
         }
 
@@ -198,7 +191,7 @@ impl GraphicsClient {
     
         matrix = m4::z_rotate_3_d(
             matrix,
-            m4::z_rotation(deg_to_rad(self.z_rotation_acc).into())
+            m4::z_rotation(deg_to_rad(self.spider.z_acc_rotation).into())
         );                
 
         self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, &matrix);
