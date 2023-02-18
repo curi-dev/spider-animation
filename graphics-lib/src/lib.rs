@@ -1,24 +1,30 @@
+use std::cell::RefCell;
 use std::panic;
-//use std::sync::Arc;
-// use std::thread;
-// use std::time::Duration;
-
+use std::rc::Rc;
 use console_error_panic_hook;
 use js_sys::WebAssembly;
 use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::{WebGlProgram, WebGlRenderingContext, HtmlCanvasElement};
-use web_sys::WebGl2RenderingContext as Gl;
-//use quad_rand as qrand;
+use web_sys::{WebGlRenderingContext, HtmlCanvasElement, WebGlUniformLocation, HtmlImageElement};
+use web_sys::WebGlRenderingContext as Gl;
+
+mod modules; // mod modules? not good
 
 mod shaders;
 mod setup;
 mod programs;
 mod webgl_utils;
+mod setup_ui_control;
+mod spider;
 
 use setup::initialize_webgl_context;
+use modules::m4::m4::M4 as m4;
 use webgl_utils::resize_canvas_to_display_size;
 use programs::base::ProgramBuilder;
+use setup_ui_control::SetupUiControl;
 
+use crate::programs::base::Program;
+use crate::spider::{Spider, LegsDirection}; // separate types and data structures 
+use crate::webgl_utils::deg_to_rad;
 
 
 #[wasm_bindgen]
@@ -27,17 +33,21 @@ extern "C" {
     fn log(s: &str);
 
     fn alert(s: &str);
-
 }
-
 
 #[wasm_bindgen]
 pub struct GraphicsClient {
-    context: WebGlRenderingContext,
-    programs: Vec<WebGlProgram>,
-    storage_positions: Vec<f32>,
-    memory_buffer: JsValue,
-    canvas_elem: HtmlCanvasElement
+    gl: WebGlRenderingContext,
+    canvas: HtmlCanvasElement,
+    a_positions: i32,
+    u_matrix: WebGlUniformLocation,
+    a_color: i32,
+    x_rotation_ptr: Rc<RefCell<f32>>,
+    y_rotation_ptr: Rc<RefCell<f32>>,
+    z_rotation_acc: f32,
+    ui_control: SetupUiControl,
+    speed: f32, // change this name
+    spider: spider::Spider
 }
 
 unsafe impl Send for GraphicsClient {}
@@ -46,204 +56,251 @@ unsafe impl Send for GraphicsClient {}
 impl GraphicsClient {
 
     #[wasm_bindgen(constructor)]
-    pub fn new() -> Self {
+    pub fn new(_image: HtmlImageElement) -> Self {    
         panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-        let (context, canvas) = initialize_webgl_context().unwrap(); // deep into problems (Err)
+        let (gl, canvas) = initialize_webgl_context().unwrap();
 
-        resize_canvas_to_display_size(&context, &canvas);
+        // create and compile shaders & link the program with these shaders (can pass the shaders here [dependency inversion]) 
+        let program = ProgramBuilder::build(&gl, Program::Program3); // refactor!
 
-        let mut programs = Vec::new();
-        let program = ProgramBuilder::build(&context); // create and compile shaders & link the program with these shaders
-        programs.push(program);
+        let a_positions_loc = gl.get_attrib_location(&program, "aPosition");
+        let u_matrix_loc = gl.get_uniform_location(&program, "uMatrix").unwrap();
+        let a_color_loc = gl.get_attrib_location(&program, "aColor");
 
-        let memory_buffer = wasm_bindgen::memory() 
-        .dyn_into::<WebAssembly::Memory>()
-        .unwrap()
-        .buffer();
-    
-        let storage_positions = GraphicsClient::get_centered_sized_quarter_or_half_canvas(
-            &canvas, 
-            Some(50.), 
-            Some(50.)
-        ); // TRUNC VALUE
-         
-        Self { 
-            context, 
-            programs,
-            storage_positions,
-            memory_buffer,
-            canvas_elem: canvas
-        }
+        gl.use_program(Some(&program));
+
+        let x_rotation = Rc::new(RefCell::new(0. as f32));   
+        let x_rotation_ptr = x_rotation.clone();
+
+        let y_rotation = Rc::new(RefCell::new(0. as f32));   
+        let y_rotation_ptr = y_rotation.clone();
+
+        let z_rotation = Rc::new(RefCell::new(0. as f32));   
+        let z_rotation_ptr = z_rotation.clone();
+
+        // NOW I HAVE THE TWO POINTERS MODIFYING THE VALUE (?)
+        // let closure = Closure::wrap(Box::new(move // move to events module (?)
+        //     |event: web_sys::KeyboardEvent| {
+            
+        //     let key_code = event.key_code();
+        //     log(&format!("keycode: {:?} ", key_code));
+
+        //     if key_code == 39 {
+        //         let x_rotation_angle = *x_rotation.borrow_mut();
+
+        //         log(&format!("[MORE] x_rotation_angle: {} ", x_rotation_angle));
+
+        //         *x_rotation.borrow_mut() = x_rotation_angle + 5.;
+        //     }
+
+        //     if key_code == 37 {
+        //         let z_rotation_angle = *z_rotation.borrow_mut();
+
+        //         log(&format!("[MINUS] x_rotation_angle: {} ", z_rotation_angle));
+                
+        //         *z_rotation.borrow_mut() = z_rotation_angle - 5.;
+        //     }
+
+        //     if key_code == 38 {
+        //         let y_rotation_angle = *y_rotation.borrow_mut();
+                
+        //         *y_rotation.borrow_mut() = y_rotation_angle + 5.;
+        //     }
+
+        //     if key_code == 40 {
+        //         let y_rotation_angle = *y_rotation.borrow_mut();
+                
+        //         *y_rotation.borrow_mut() = y_rotation_angle - 5.;
+        //     }
+        // }) as Box<dyn FnMut(_)>);
+
+        // canvas.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref()).unwrap(); // ?
+        // closure.forget();
+
+        let ui_control = SetupUiControl::new();
+
+        Self {
+            canvas,gl,
+            a_positions:a_positions_loc,
+            u_matrix:u_matrix_loc,
+            a_color:a_color_loc, 
+            z_rotation_acc: 0.,
+            speed: 10., 
+            x_rotation_ptr, 
+            y_rotation_ptr, 
+            ui_control,
+            spider: Spider::new()
+        }      
     }
 
 
-    // think of cronology of functions
-    pub fn render(&mut self) {
-        let curr_program = &self.programs[0]; // error handling (?)
-        self.context.use_program(Some(curr_program));
-
-        self.context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+    pub fn render(&mut self) {          
+        self.gl.clear(Gl::COLOR_BUFFER_BIT);
         
-        let pos_buffer = self.context.create_buffer().unwrap();
-        self.context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&pos_buffer));
-
-        let should_redraw = resize_canvas_to_display_size(&self.context, &self.canvas_elem);
-
-        if should_redraw {
-            let new_geometry_pos = GraphicsClient::get_centered_sized_quarter_or_half_canvas(
-                &self.canvas_elem, 
-                None, 
-                None
-            ); // different sizes
-
-            self.storage_positions = new_geometry_pos;    
-        }
-        
-        let resolution_attr_loc = self.context.get_uniform_location(&curr_program, "uResolution").unwrap();
-        self.context.uniform2f(Some(&resolution_attr_loc), self.canvas_elem.client_width() as f32 as f32, self.canvas_elem.client_height() as f32);
+        //deltatime = deltatime / 1000.;
        
-        
-        // bind data to buffer as float32Array ////////////////////////////////////////////////////////////////////////////////
-        
-        let pos_memory_loc = self.storage_positions.as_ptr() as u32 / 4;
-        let pos_ptr = js_sys::Float32Array::new(&self.memory_buffer)
-            .subarray(pos_memory_loc, pos_memory_loc + self.storage_positions.len() as u32);
+        resize_canvas_to_display_size(&self.gl, &self.canvas);
 
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        let positions_buffer = self.gl.create_buffer().unwrap(); // it leaves inside rust? (try to transfer into the function)
+        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&positions_buffer));
 
-        let primitive = Gl::TRIANGLES;
-        
-        let position_attr_loc = self.context.get_attrib_location(&curr_program, "aPosition");
-        self.context.vertex_attrib_pointer_with_i32(
-            position_attr_loc as u32, 
-            2, 
+        self.gl.vertex_attrib_pointer_with_i32(
+            self.a_positions as u32, 
+            3, 
             Gl::FLOAT, 
             false, 
             0, 
             0,
-            // ARRAY_BUFFER = last binded buffer
-        ); // use the same buffer to draw more stuff [STRIDE] 
-        
-        self.context.enable_vertex_attrib_array(position_attr_loc as u32);
-        
-        self.context.buffer_data_with_array_buffer_view(Gl::ARRAY_BUFFER, &pos_ptr, Gl::STATIC_DRAW); // it could a different primitive
+        );
 
-        self.draw(self.storage_positions.len() as i32, primitive);
+        self.send_positions_to_gpu(&self.spider.upper_and_middle_legs_data);
 
+        let mut matrix = m4::projection(self.canvas.client_width() as f32, self.canvas.client_height() as f32, 600.);
+        matrix = m4::translate_3_d(matrix, m4::translation(300., 200., 199.));
+        matrix = m4::scale_3_d(matrix, m4::scaling(6., 4.,1.));
+
+        let mut x_rotation_angle: f32 = 0.;
+        let mut y_rotation_angle: f32 = 0.;
+        //let mut z_rotation_angle: f32 = 0.;
+
+        match self.ui_control.is_active {
+            true => {
+                x_rotation_angle = *self.x_rotation_ptr.try_borrow().unwrap();
+                y_rotation_angle = *self.y_rotation_ptr.try_borrow().unwrap();
+                //z_rotation_angle = *self.z_rotation_ptr.try_borrow().unwrap();
+            },
+            false => {
+                let deltatime = 0.026;
+                let mut displacement: f32 = self.speed * deltatime; // angle_displacement
+                               
+                if self.spider.legs_direction == LegsDirection::Back {
+                    displacement *= -1.;
+                }
+                
+                self.z_rotation_acc += displacement;
+
+                if !self.spider.move_range.contains(&self.z_rotation_acc) {
+                    self.spider.change_direction();
+                }
+            },   
+        }
+
+        matrix = m4::x_rotate_3_d(
+            matrix,
+            m4::x_rotation(deg_to_rad(x_rotation_angle).into())
+        );
+        
+        matrix = m4::y_rotate_3_d(
+            matrix,
+            m4::y_rotation(deg_to_rad(y_rotation_angle).into())
+        );
+    
+        matrix = m4::z_rotate_3_d(
+            matrix,
+            m4::z_rotation(deg_to_rad(self.z_rotation_acc).into())
+        );                
+
+        self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, &matrix);
+
+        let colors_buffer = self.gl.create_buffer().unwrap(); // it leaves inside rust? (try to transfer into the function)
+        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&colors_buffer));
+        
+        self.gl.vertex_attrib_pointer_with_i32(
+            self.a_color as u32, 
+            3, 
+            Gl::UNSIGNED_BYTE, 
+            true, 
+            0, 
+            0,
+        );
+
+        self.send_colors_to_gpu(&self.spider.colors);
+        
+        self.consume_data(self.spider.upper_and_middle_legs_data.len() as i32 / 3, Gl::TRIANGLES);
+        
+        // edit the transformation matrix for the second part of the pawn but using the same base of coordinates
+        matrix = m4::projection(self.canvas.client_width() as f32, self.canvas.client_height() as f32, 600.);
+        matrix = m4::translate_3_d(matrix, m4::translation(500., 200., 199.));
+        matrix = m4::scale_3_d(matrix, m4::scaling(4., 2.,1.));
+
+        self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, &matrix);
+
+        self.consume_data(self.spider.upper_and_middle_legs_data.len() as i32 / 3, Gl::TRIANGLES);
+        
+        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&positions_buffer));
+
+        self.gl.vertex_attrib_pointer_with_i32(
+            self.a_positions as u32, 
+            3, 
+            Gl::FLOAT, 
+            false, 
+            0, 
+            0,
+        );
+
+        self.send_positions_to_gpu(&self.spider.bottom_legs_data);
+        
+        matrix = m4::projection(self.canvas.client_width() as f32, self.canvas.client_height() as f32, 600.); // projection matrix is always the same
+        matrix = m4::translate_3_d(matrix, m4::translation(700., 200., 199.));
+        matrix = m4::scale_3_d(matrix, m4::scaling(3.75, 0.75,1.));
+
+        self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, &matrix);
+
+        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&colors_buffer));
+        
+        self.gl.vertex_attrib_pointer_with_i32(
+            self.a_color as u32, 
+            3, 
+            Gl::UNSIGNED_BYTE, 
+            true, 
+            0, 
+            0,
+        );
+        self.send_colors_to_gpu(&self.spider.colors);
+
+        self.consume_data(self.spider.bottom_legs_data.len() as i32 / 3, Gl::TRIANGLES);
+       
     }
 
+    fn send_positions_to_gpu(&self, positions: &[f32]) {
+        let memory_buffer_view = wasm_bindgen::memory() // persist this memory buffer?
+        .dyn_into::<WebAssembly::Memory>()
+        .unwrap()
+        .buffer();
 
-    fn draw(&self, vert_count: i32, mode: u32) {
-        self.context.draw_arrays(mode, 0, vert_count);
+        let ptr_mem_loc = positions.as_ptr() as u32 / 4; // 4 bytes each
+        let coords_ptr = js_sys::Float32Array::new(&memory_buffer_view)
+            .subarray(ptr_mem_loc, ptr_mem_loc + positions.len() as u32);
+        self.gl.buffer_data_with_array_buffer_view(Gl::ARRAY_BUFFER, &coords_ptr, Gl::DYNAMIC_DRAW);
+        self.gl.enable_vertex_attrib_array(self.a_color as u32);
     }
 
-    fn get_centered_sized_quarter_or_half_canvas(canvas: &HtmlCanvasElement, geom_width: Option<f32>, geom_height: Option<f32>) -> Vec<f32> {
-        let center_x = (canvas.client_width() / 2) as f32;
-        let center_y = (canvas.client_height() / 2) as f32;
-        
+    fn send_colors_to_gpu(&self, colors: &[u8]) {
+        let memory_buffer_view = wasm_bindgen::memory() // persist this memory buffer?
+        .dyn_into::<WebAssembly::Memory>()
+        .unwrap()
+        .buffer();
 
-        let (x, x2) = match geom_width {
-            Some(size) => {
-                
-                let x = center_x - (size / 2.);
-                let x2 = x + size;   
-                
-                (x, x2)
-            },
-            None => {
-                
-                let size = center_x;
-                
-                let x = center_x - (size / 2.);
-                let x2 = x + size;    
-
-                (x, x2)
-            },
-        };
-
-        let (y, y2) = match geom_height {
-            Some(size) => {
-                let y = center_y + (size / 2.);
-                let y2 = y - size;
-
-                (y, y2)
-            },
-            None => {
-                let size= center_y;
-
-                let y = center_y + (size / 2.);
-                let y2 = y - size;
-
-                (y, y2)
-            },
-        };
-
-        // let x = center_x - (geom_width / 2.);
-        // let x2 = x + width;
-        
-        // let y = center_y + (geom_height / 2.);
-        // let y2 = y - height;
-
-        vec![
-            x, y,
-            x, y2,
-            x2, y,
-            x2, y,
-            x, y2,
-            x2, y2
-        ]
+        let ptr_mem_loc = colors.as_ptr() as u32; // 4 bytes each
+        let coords_ptr = js_sys::Uint8Array::new(&memory_buffer_view)
+            .subarray(ptr_mem_loc, ptr_mem_loc + colors.len() as u32);
+        self.gl.buffer_data_with_array_buffer_view(Gl::ARRAY_BUFFER, &coords_ptr, Gl::STATIC_DRAW);
+        self.gl.enable_vertex_attrib_array(self.a_positions as u32);
+    }
+    
+    fn consume_data(&self, vert_count: i32, mode: u32) {
+        self.gl.draw_arrays(mode, 0, vert_count);
     }
 
-    // fn build_vec_geom(geometry: Geometry, width: f32, height: f32, canvas: &HtmlCanvasElement) -> Vec<f32> { // in pxls
-     
-    //     match geometry {
-    //         Geometry::TRIANGLE => {
-    //             let x = (quad_rand::gen_range(0., 1.01) * 2. -1.) as f32;
-    //             let x2 = x + width;
-    //             let y = (quad_rand::gen_range(0., 1.01) * 2. -1.) as f32;
-    //             let y2 = y + height;
+    fn get_center_of_canvas(&self) -> (f32, f32) {
+        let center_x = (self.canvas.client_width() / 2) as f32;
+        let center_y = (self.canvas.client_height() / 2) as f32;
 
-    //             vec![
-    //                 x, y2,
-    //                 x, y,
-    //                 x2, y2
-    //             ]
-    //         },
-    //         Geometry::QUARTER => {
-    //             let center_x = (canvas.client_width() / 2) as f32;
-    //             let center_y = (canvas.client_height() / 2) as f32;
-              
-    //             let x = center_x - (width / 2.);
-    //             let x2 = x + width;
-             
-    //             let y = center_y + (height / 2.);
-    //             let y2 = y - height;
-
-    //             vec![
-    //                 x, y,
-    //                 x, y2,
-    //                 x2, y,
-    //                 x2, y,
-    //                 x, y2,
-    //                 x2, y2
-    //             ]
-    //         },
-    //         Geometry::LINE => {
-    //             vec![
-    //                 quad_rand::gen_range(0., 1.01) * 2. -1., quad_rand::gen_range(0., 1.01) * 2. -1.,
-    //                 quad_rand::gen_range(0., 1.01) * 2. -1., quad_rand::gen_range(0., 1.01) * 2. -1.
-    //             ]
-    //         },
-    //     }
-    // }
+        (center_x, center_y)
+    }
 }
 
-enum Geometry {
-    TRIANGLE,
-    QUARTER,
-    LINE
-}
 
 
 

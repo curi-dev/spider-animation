@@ -3,19 +3,22 @@ import styled, { createGlobalStyle } from 'styled-components'
 
 export const Container = styled.div`
     width: 100vw;
-    height: 100vh;
-    padding: 2px;
-    border: 2px solid blue;
+    height: 100vh !important;
+   
+    /* display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, 1fr);
+     */
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-
-    & canvas {
-        width: 60%;
-        height: 60%;
+    canvas {
+        width: 100%;
+        height: 450px;
+        //height: 100%;
+        /* width: 900px;
+        height: 700px; */
     }
+
+
 
 `
 

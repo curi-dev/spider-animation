@@ -5,8 +5,9 @@
 export class GraphicsClient {
   free(): void;
 /**
+* @param {HTMLImageElement} _image
 */
-  constructor();
+  constructor(_image: HTMLImageElement);
 /**
 */
   render(): void;

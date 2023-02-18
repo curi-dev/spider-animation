@@ -1,0 +1,5 @@
+c:\Users\shopp\repos\graphics\hello_triangle_2\graphics-lib\target\debug\deps\graphics_lib-572655b349176a3f.rmeta: src\main.rs
+
+c:\Users\shopp\repos\graphics\hello_triangle_2\graphics-lib\target\debug\deps\graphics_lib-572655b349176a3f.d: src\main.rs
+
+src\main.rs:

@@ -1,25 +1,46 @@
-use wasm_bindgen::JsValue;
 use web_sys::{WebGlProgram, WebGlRenderingContext, WebGlShader};
 
-use crate::shaders;
+use crate::{shaders, log};
 
-
+pub enum Program {
+    Program1,
+    Program2,
+    Program3,
+}
 pub struct ProgramBuilder {}
 
 impl ProgramBuilder {
 
-    pub fn build(context: &WebGlRenderingContext) -> WebGlProgram {
+    pub fn build(context: &WebGlRenderingContext, program_indx: Program) -> WebGlProgram {
+
+        let vertex_source: &str;
+        let frag_source: &str;
+
+        match program_indx {
+            Program::Program1 => {
+                vertex_source = shaders::vertex::base::SHADER;
+                frag_source = shaders::fragment::base::SHADER;
+            },
+            Program::Program2 => {
+                vertex_source = shaders::vertex::base_2::SHADER;
+                frag_source = shaders::fragment::base_2::SHADER;
+            },
+            Program::Program3 => {
+                vertex_source = shaders::vertex::base::SHADER;
+                frag_source = shaders::fragment::base::SHADER;
+            },
+        }
 
         let vert_shader = ProgramBuilder::compile_shader(
             context, 
             WebGlRenderingContext::VERTEX_SHADER,
-            shaders::vertex::base::SHADER
+            vertex_source
         ).unwrap();
     
         let frag_shader = ProgramBuilder::compile_shader(
             context, 
             WebGlRenderingContext::FRAGMENT_SHADER, 
-            shaders::fragment::base::SHADER
+            frag_source
         ).unwrap(); // ?
     
         // link the program and shaders

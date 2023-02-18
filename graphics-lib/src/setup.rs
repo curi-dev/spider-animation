@@ -3,6 +3,7 @@ use web_sys::WebGlRenderingContext;
 
 
 pub fn initialize_webgl_context() -> Result<(WebGlRenderingContext, web_sys::HtmlCanvasElement), JsValue> {
+    
     let window = web_sys::window().unwrap();
     
     let document = window.document().unwrap();
@@ -11,15 +12,14 @@ pub fn initialize_webgl_context() -> Result<(WebGlRenderingContext, web_sys::Htm
     
     let canvas: web_sys::HtmlCanvasElement = canvas.dyn_into::<web_sys::HtmlCanvasElement>()?;
 
-    let context = canvas
+    let gl = canvas
         .get_context("webgl")? // without ? does not compile
         .unwrap()
         .dyn_into::<WebGlRenderingContext>()?;
-    
-    //context.enable(WebGlRenderingContext::BLEND);
-    //context.blend_func(WebGlRenderingContext::SRC_ALPHA, WebGlRenderingContext::ONE_MINUS_SRC_ALPHA);
-    context.clear_color(0.25, 0.25, 0.75, 1.); 
-    //context.clear_depth(1.);
-    
-    Ok((context, canvas))
+       
+    gl.clear_color(0.05, 0.05, 0.25, 1.); 
+    gl.enable(WebGlRenderingContext::CULL_FACE);
+    gl.enable(WebGlRenderingContext::DEPTH_TEST);
+ 
+    Ok((gl, canvas))
 }

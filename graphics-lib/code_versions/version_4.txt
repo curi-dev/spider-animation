@@ -1,0 +1,247 @@
+use std::panic;
+use console_error_panic_hook;
+use js_sys::{WebAssembly};
+use wasm_bindgen::{prelude::*, JsCast};
+use web_sys::{WebGlProgram, WebGlRenderingContext, HtmlCanvasElement, WebGlUniformLocation};
+use web_sys::WebGl2RenderingContext as Gl;
+//use quad_rand as qrand;
+
+mod shaders;
+mod setup;
+mod programs;
+mod webgl_utils;
+
+use setup::initialize_webgl_context;
+use webgl_utils::resize_canvas_to_display_size;
+use programs::base::ProgramBuilder;
+
+
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+
+    fn alert(s: &str);
+
+}
+
+
+#[wasm_bindgen]
+pub struct GraphicsClient {
+    gl: WebGlRenderingContext,
+    initial_positions: Vec<f32>,
+    canvas_elem: HtmlCanvasElement,
+    initial_program: WebGlProgram,
+    size: f32,
+    velocity: f32   
+}
+
+unsafe impl Send for GraphicsClient {}
+
+#[wasm_bindgen]
+impl GraphicsClient {
+
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        panic::set_hook(Box::new(console_error_panic_hook::hook));
+
+        let (gl, canvas) = initialize_webgl_context().unwrap(); // deep into problems (Err)
+
+        resize_canvas_to_display_size(&gl, &canvas);
+
+        let initial_program = ProgramBuilder::build(&gl); // create and compile shaders & link the program with these shaders (can pass the shaders here)
+
+        let size = 50.;
+        let initial_positions = GraphicsClient::get_centered_sized_quarter(
+            &canvas, 
+            size,           
+        ); 
+        
+        gl.use_program(Some(&initial_program));
+            
+        Self {
+            gl,
+            initial_program,
+            initial_positions, 
+            size,
+            canvas_elem: canvas,
+            velocity: 0.1, 
+        }
+    }
+
+    pub fn render(&mut self, mut deltatime: f32, mut total_elapsed_time: f32) {        
+        //log(&format!("total_elapsed_time: {} ", total_elapsed_time));
+        
+        deltatime *= 0.001;
+        //total_elapsed_time *= 0.001;
+        
+        let distance = (self.velocity * deltatime) * total_elapsed_time / deltatime;
+        log(&format!("distance: {} ", distance));
+        
+        self.gl.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+           
+        let pos_buffer = self.gl.create_buffer().unwrap();
+        self.gl.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&pos_buffer));
+
+        let _should_redraw = resize_canvas_to_display_size(&self.gl, &self.canvas_elem);
+
+        // if should_redraw {
+        //     let new_geometry_pos = GraphicsClient::get_centered_sized_quarter_or_half_canvas(
+        //         &self.canvas_elem, 
+        //         Some(50.), 
+        //         Some(50.)
+        //     ); 
+
+        //     self.storage_positions = new_geometry_pos;    
+        // }
+
+        let mut has_translation_positions: Option<()> = None;
+        if self.initial_positions.len() > 12 {
+            has_translation_positions = Some(());
+        };
+
+        match has_translation_positions {
+            Some(_) => { 
+                let translation_vec: Vec<f32> = self.translation_x_matrix(distance);
+                self.initial_positions.splice(13.., translation_vec.into_iter()); // better for memory reallocation
+                
+                log(&format!("initial positions at 1+: {:?} ", self.initial_positions));
+            },
+            None => {
+                let translation_vec: Vec<f32> = vec![
+                    0., 0.,
+                    0., 0.,
+                    0., 0.,
+                    0., 0.,
+                    0., 0.,
+                    0., 0.
+                ];
+
+                self.initial_positions.extend(translation_vec.iter());
+
+                log(&format!("initial positions at 0: {:?} ", self.initial_positions));
+            },
+        }
+         
+        let u_resolution_loc = self.gl.get_uniform_location(&self.initial_program, "uResolution").unwrap();
+        self.gl.uniform2f(Some(&u_resolution_loc), self.canvas_elem.client_width() as f32 as f32, self.canvas_elem.client_height() as f32);
+             
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        let memory_buffer = wasm_bindgen::memory() // persisted memory buffer stop to work after some while
+        .dyn_into::<WebAssembly::Memory>()
+        .unwrap()
+        .buffer();
+
+        let pos_memory_loc = self.initial_positions.as_ptr() as u32 / 4; // 4 bytes each
+        let pos_ptr = js_sys::Float32Array::new(&memory_buffer)
+            .subarray(pos_memory_loc, pos_memory_loc + self.initial_positions.len() as u32);
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+       
+        let a_position_loc = self.gl.get_attrib_location(&self.initial_program, "aPosition");
+        self.gl.vertex_attrib_pointer_with_i32(
+            a_position_loc as u32, 
+            2, 
+            Gl::FLOAT, 
+            false, 
+            0, 
+            0,
+            // ARRAY_BUFFER = last binded buffer
+        ); // use the same buffer to draw more stuff [STRIDE]
+        
+        let a_translation_loc = self.gl.get_attrib_location(&self.initial_program, "aTranslation");
+        self.gl.vertex_attrib_pointer_with_i32(
+            a_translation_loc as u32, 
+            2, 
+            Gl::FLOAT, 
+            false, 
+            0, 
+            52
+        );
+        
+        self.gl.enable_vertex_attrib_array(a_position_loc as u32);
+        self.gl.enable_vertex_attrib_array(a_translation_loc as u32);
+        
+        self.gl.buffer_data_with_array_buffer_view(Gl::ARRAY_BUFFER, &pos_ptr, Gl::STATIC_DRAW); // it could a different primitive
+
+        let primitive = Gl::TRIANGLES;
+        self.draw(self.initial_positions.len() as i32 / 2, primitive);
+        
+    }
+    
+    fn check_collision() {
+        // check collision and if true * -1
+        log("checking collision rules...");
+    }
+
+    fn draw(&self, vert_count: i32, mode: u32) {
+        self.gl.draw_arrays(mode, 0, vert_count);
+    }
+
+    fn translation_x_matrix(&self, tx: f32) -> Vec<f32> { // very specific to this geometry [MORE GENERIC]
+                
+        let x = tx;
+        let x2 = tx;
+   
+        let y = 0.;
+        let y2 = 0.;
+
+        let translation_mat = vec![
+            x, y,
+            x, y2,
+            x2, y,
+            x2, y,
+            x, y2,
+            x2, y2
+        ];   
+        
+        translation_mat
+    }
+
+    fn resulting_translation_matrix(&self, tx: f32) -> [f32; 12] { // very specific to this geometry [MORE GENERIC]
+        let mut resulting_mat: [f32; 12] = [0.; 12];
+
+        resulting_mat[0] = self.initial_positions[0] + tx; // change to curr_positions
+        resulting_mat[1] = self.initial_positions[1] + 0.; // could be ty
+        
+        resulting_mat[2] = self.initial_positions[1] + tx; // change to curr_positions
+        resulting_mat[3] = self.initial_positions[2] + 0.; // could be ty
+        
+        resulting_mat[4] = self.initial_positions[0] + tx; // change to curr_positions
+        resulting_mat[5] = self.initial_positions[1] + 0.; // could be ty
+        
+        resulting_mat[6] = self.initial_positions[0] + tx; // change to curr_positions
+        resulting_mat[7] = self.initial_positions[1] + 0.; // could be ty
+        
+        resulting_mat[8] = self.initial_positions[0] + tx; // change to curr_positions
+        resulting_mat[9] = self.initial_positions[1] + 0.; // could be ty
+        
+        resulting_mat[10] = self.initial_positions[0] + tx; // change to curr_positions
+        resulting_mat[11] = self.initial_positions[1] + 0.; // could be ty
+
+        
+        resulting_mat
+    }
+
+    fn get_centered_sized_quarter(
+        canvas: &HtmlCanvasElement, 
+        size: f32, 
+    ) -> Vec<f32> {
+        let center_x = (canvas.client_width() / 2) as f32;
+        let center_y = (canvas.client_height() / 2) as f32;
+        
+        let x = center_x - (size / 2.);
+        let x2 = x + size;
+        let y = center_y + (size / 2.);
+        let y2 = y - size;  
+
+        vec![
+            x, y,
+            x, y2,
+            x2, y,
+            x2, y,
+            x, y2,
+            x2, y2
+        ]
+    }
+}

@@ -1,0 +1,3 @@
+cargo:rerun-if-changed=build/main.rs
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=C:\Users\shopp\repos\graphics\hello_triangle_2\graphics-lib\target\wasm32-unknown-unknown\debug\build\typenum-8bd848577d3839f9\out\consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=C:\Users\shopp\repos\graphics\hello_triangle_2\graphics-lib\target\wasm32-unknown-unknown\debug\build\typenum-8bd848577d3839f9\out\op.rs

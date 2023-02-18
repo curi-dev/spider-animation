@@ -1,0 +1,665 @@
+use std::borrow::BorrowMut;
+use std::cell::RefCell;
+use std::panic;
+use std::rc::Rc;
+use console_error_panic_hook;
+use js_sys::WebAssembly;
+use wasm_bindgen::{prelude::*, JsCast};
+use web_sys::{WebGlRenderingContext, HtmlCanvasElement, WebGlUniformLocation, HtmlImageElement, WebGlBuffer};
+use web_sys::WebGlRenderingContext as Gl;
+
+
+mod shaders;
+mod setup;
+mod programs;
+mod webgl_utils;
+mod modules; // mod modules? not good
+
+
+use setup::initialize_webgl_context;
+use webgl_utils::{resize_canvas_to_display_size, deg_to_rad};
+use programs::base::ProgramBuilder;
+use modules::{geometry::geometry::Geometry, m4::m4::M4 as m4};
+
+
+use crate::programs::base::Program;
+
+
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+
+    fn alert(s: &str);
+
+}
+
+pub enum Direction {
+    LEFT,
+    RIGHT,
+    UP,
+    DOWN
+}
+#[wasm_bindgen]
+pub struct GraphicsClient {
+    gl: WebGlRenderingContext,
+    canvas_elem: HtmlCanvasElement,
+    gl_2: WebGlRenderingContext,
+    canvas_elem_2: HtmlCanvasElement,
+    u_resolution: WebGlUniformLocation,
+    u_translation: WebGlUniformLocation,
+    u_rotation: WebGlUniformLocation,
+    u_matrix: WebGlUniformLocation,
+    a_position: i32,
+    a_positions_2: i32,
+    a_text_coord: i32,
+    a_color: i32,
+    geometries: Vec<Geometry>,
+    point_coords: [f32; 2],
+    mouse_angle: Rc<RefCell<f32>>,
+    image: HtmlImageElement,
+
+}
+
+unsafe impl Send for GraphicsClient {}
+
+const SIZE: f32 = 100.;
+
+#[wasm_bindgen]
+impl GraphicsClient {
+
+    #[wasm_bindgen(constructor)]
+    pub fn new(image: HtmlImageElement) -> Self {    
+        panic::set_hook(Box::new(console_error_panic_hook::hook));
+
+        let (
+            context_gl, 
+            gl_canvas, 
+            context_gl_2, 
+            gl_canvas_2) = initialize_webgl_context().unwrap(); // deep into problems (Err)
+
+        resize_canvas_to_display_size(&context_gl, &gl_canvas);
+        resize_canvas_to_display_size(&context_gl_2, &gl_canvas_2);
+
+        let initial_program = ProgramBuilder::build(&context_gl, Program::Program1); // create and compile shaders & link the program with these shaders (can pass the shaders here)
+        context_gl.use_program(Some(&initial_program)); // fazer teste não persistindo os programas no estado da struct
+
+        let initial_program_2 = ProgramBuilder::build(&context_gl_2, Program::Program2);
+        context_gl_2.use_program(Some(&initial_program_2));
+
+        let a_position_loc = context_gl.get_attrib_location(&initial_program, "aPosition");
+        let a_text_coord_loc = context_gl.get_attrib_location(&initial_program, "aTextCoords");
+        let u_resolution_loc = context_gl.get_uniform_location(&initial_program, "uResolution").unwrap();
+        let u_translation_loc = context_gl.get_uniform_location(&initial_program, "uTranslation").unwrap();
+        let u_rotation_loc = context_gl.get_uniform_location(&initial_program, "uRotation").unwrap();
+        
+        let u_matrix_loc = context_gl_2.get_uniform_location(&initial_program_2, "uMatrix").unwrap();
+        let a_position2_loc = context_gl_2.get_attrib_location(&initial_program_2, "aPosition");
+        let a_color_loc = context_gl_2.get_attrib_location(&initial_program_2, "aColor");
+
+        let translation_mat = Geometry::translation_mat(0., 0.);
+        context_gl.uniform_matrix3fv_with_f32_array(Some(&u_translation_loc), false, &translation_mat);
+        let rotation_mat = Geometry::rotation_mat(0.);
+        context_gl.uniform_matrix3fv_with_f32_array(Some(&u_rotation_loc), false, &rotation_mat);
+        context_gl.uniform2f(Some(&u_resolution_loc), gl_canvas.width() as f32 as f32, gl_canvas.height() as f32);
+
+        let (center_x, center_y) = GraphicsClient::get_center_canvas(&gl_canvas);
+        let mut x = center_x - (SIZE / 2.);
+        let mut y = center_y + (SIZE / 2.);
+        
+        let mut geometries = Vec::new();
+        let mut size = SIZE;
+        for i in 1..6 {
+            
+            if i > 1 {
+                let offset = size / 2.;
+                x = x + offset;
+                y = y + offset / 2.5;
+                
+                size = size * 0.8;
+            }
+            
+            let geometry = Geometry::new(
+                x, 
+                y, 
+                size, 
+                context_gl.create_buffer().unwrap(), 
+                a_position_loc
+            );
+
+            geometries.push(geometry);
+        }
+
+        let point_x = x * 0.95;
+        let point_y = y * 1.05;
+
+        let point_coords: [f32; 2] = [point_x, point_y];
+
+        let mut angle_ref = Rc::new(RefCell::new(0.));   
+        let angle_ref_clone = angle_ref.clone();
+
+        let closure = Closure::wrap(Box::new(move 
+            |event: web_sys::MouseEvent| {
+            let mouse_x = event.offset_x();
+            let mouse_y = event.offset_y();
+
+            let angle = ((mouse_y as f32 - center_y) / (mouse_x as f32 - center_x)).atan() * (180. / 3.14) * -1.;
+            
+            angle_ref.borrow_mut().replace(angle);
+        }) as Box<dyn FnMut(_)>);
+
+        gl_canvas.add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref()).unwrap(); // ?
+        closure.forget();
+        
+        log("starting render!");
+
+        Self {
+            gl: context_gl,
+            gl_2: context_gl_2,
+            canvas_elem_2: gl_canvas_2,
+            geometries,
+            canvas_elem: gl_canvas,
+            a_position: a_position_loc,
+            a_text_coord: a_text_coord_loc,
+            u_resolution: u_resolution_loc,
+            u_translation: u_translation_loc,
+            u_rotation: u_rotation_loc,
+            u_matrix: u_matrix_loc,
+            a_positions_2: a_position2_loc,
+            a_color: a_color_loc,
+            mouse_angle: angle_ref_clone,
+            point_coords,
+            image,
+        }
+    }
+
+
+    fn get_flatten_coords(&self) -> Vec<f32> {
+        let mut coords: Vec<Vec<f32>> = Vec::new();
+        for geometry in self.geometries.iter() {
+            coords.push(geometry.coords.clone()); // is that really necessary to clone it?
+        }
+
+        let flatten_coords: Vec<f32> = coords.into_iter().flatten().collect();
+
+        flatten_coords
+    }
+
+    pub fn render(&mut self, mut deltatime: f32, _total_elapsed_time: f32) {          
+        //deltatime *= 0.001;
+        //let distance = self.velocity / deltatime; // frame rate independent
+
+         // SECOND CANVAS
+        
+        self.gl_2.clear(WebGlRenderingContext::COLOR_BUFFER_BIT | WebGlRenderingContext::DEPTH_BUFFER_BIT);
+        let _should_redraw = resize_canvas_to_display_size(&self.gl_2, &self.canvas_elem_2);
+       
+        let mut model = m4::projection(self.canvas_elem_2.client_width() as f32, self.canvas_elem_2.client_height() as f32, 400.);     
+                
+        model = m4::translate_3D(model, m4::translation(45., 150., 0.));        
+        
+        model = m4::x_rotate_3_d(
+            model,
+            m4::x_rotation(deg_to_rad(40.).into())
+        );
+        
+        model = m4::y_rotate_3_d(
+            model,
+            m4::y_rotation(deg_to_rad(25.).into())
+        );
+        
+        model = m4::z_rotate_3_d(
+            model,
+            m4::z_rotation(deg_to_rad(325.).into())
+        );
+        
+        model = m4::scale_3D(model, m4::scaling(1., 1., 1.));    
+        
+        self.gl_2.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, &model);
+
+        let positions_buffer_2 = self.gl_2.create_buffer().unwrap();
+
+        let memory_buffer = wasm_bindgen::memory() // persist this memory buffer?
+        .dyn_into::<WebAssembly::Memory>()
+        .unwrap()
+        .buffer();
+ 
+        let geom: [f32; 288] = [           
+             // left column front
+          0.,   0.,  0.,
+          0., 150.,  0.,
+          30.,   0.,  0.,
+          0., 150.,  0.,
+          30., 150.,  0.,
+          30.,   0.,  0.,
+
+          // top rung front
+          30.,   0.,  0.,
+          30.,  30.,  0.,
+          100.,   0.,  0.,
+          30.,  30.,  0.,
+          100.,  30.,  0.,
+          100.,   0.,  0.,
+
+          // middle rung front
+          30.,  60.,  0.,
+          30.,  90.,  0.,
+          67.,  60.,  0.,
+          30.,  90.,  0.,
+          67.,  90.,  0.,
+          67.,  60.,  0.,
+
+          // left column back
+            0.,   0.,  30.,
+           30.,   0.,  30.,
+            0., 150.,  30.,
+            0., 150.,  30.,
+           30.,   0.,  30.,
+           30., 150.,  30.,
+
+          // top rung back
+           30.,   0.,  30.,
+          100.,   0.,  30.,
+           30.,  30.,  30.,
+           30.,  30.,  30.,
+          100.,   0.,  30.,
+          100.,  30.,  30.,
+
+          // middle rung back
+           30.,  60.,  30.,
+           67.,  60.,  30.,
+           30.,  90.,  30.,
+           30.,  90.,  30.,
+           67.,  60.,  30.,
+           67.,  90.,  30.,
+
+          // top
+            0.,   0.,   0.,
+          100.,   0.,   0.,
+          100.,   0.,  30.,
+            0.,   0.,   0.,
+          100.,   0.,  30.,
+            0.,   0.,  30.,
+
+          // top rung right
+          100.,   0.,   0.,
+          100.,  30.,   0.,
+          100.,  30.,  30.,
+          100.,   0.,   0.,
+          100.,  30.,  30.,
+          100.,   0.,  30.,
+
+          // under top rung
+          30.,   30.,   0.,
+          30.,   30.,  30.,
+          100.,  30.,  30.,
+          30.,   30.,   0.,
+          100.,  30.,  30.,
+          100.,  30.,   0.,
+
+          // between top rung and middle
+          30.,   30.,   0.,
+          30.,   60.,  30.,
+          30.,   30.,  30.,
+          30.,   30.,   0.,
+          30.,   60.,   0.,
+          30.,   60.,  30.,
+
+          // top of middle rung
+          30.,   60.,   0.,
+          67.,   60.,  30.,
+          30.,   60.,  30.,
+          30.,   60.,   0.,
+          67.,   60.,   0.,
+          67.,   60.,  30.,
+
+          // right of middle rung
+          67.,   60.,   0.,
+          67.,   90.,  30.,
+          67.,   60.,  30.,
+          67.,   60.,   0.,
+          67.,   90.,   0.,
+          67.,   90.,  30.,
+
+          // bottom of middle rung.
+          30.,   90.,   0.,
+          30.,   90.,  30.,
+          67.,   90.,  30.,
+          30.,   90.,   0.,
+          67.,   90.,  30.,
+          67.,   90.,   0.,
+
+          // right of bottom
+          30.,   90.,   0.,
+          30.,  150.,  30.,
+          30.,   90.,  30.,
+          30.,   90.,   0.,
+          30.,  150.,   0.,
+          30.,  150.,  30.,
+
+          // bottom
+          0.,   150.,   0.,
+          0.,   150.,  30.,
+          30.,  150.,  30.,
+          0.,   150.,   0.,
+          30.,  150.,  30.,
+          30.,  150.,   0.,
+
+          // left side
+          0.,   0.,   0.,
+          0.,   0.,  30.,
+          0., 150.,  30.,
+          0.,   0.,   0.,
+          0., 150.,  30.,
+          0., 150.,   0.
+        ];
+
+        self.set_geometry(Canvas::Canvas2, &geom, &positions_buffer_2, &memory_buffer, self.a_positions_2, 3);
+
+        let colors_buffer = self.gl_2.create_buffer().unwrap();
+        self.gl_2.bind_buffer(Gl::ARRAY_BUFFER, Some(&colors_buffer));
+
+        let colors: [u8; 288] = [
+            // left column front
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+
+            // top rung front
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+
+            // middle rung front
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+            200,  70, 120,
+
+            // left column back
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+
+            // top rung back
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+
+            // middle rung back
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+            80, 70, 200,
+
+            // top
+            70, 200, 210,
+            70, 200, 210,
+            70, 200, 210,
+            70, 200, 210,
+            70, 200, 210,
+            70, 200, 210,
+
+            // top rung right
+            200, 200, 70,
+            200, 200, 70,
+            200, 200, 70,
+            200, 200, 70,
+            200, 200, 70,
+            200, 200, 70,
+
+            // under top rung
+            210, 100, 70,
+            210, 100, 70,
+            210, 100, 70,
+            210, 100, 70,
+            210, 100, 70,
+            210, 100, 70,
+
+            // between top rung and middle
+            210, 160, 70,
+            210, 160, 70,
+            210, 160, 70,
+            210, 160, 70,
+            210, 160, 70,
+            210, 160, 70,
+
+            // top of middle rung
+            70, 180, 210,
+            70, 180, 210,
+            70, 180, 210,
+            70, 180, 210,
+            70, 180, 210,
+            70, 180, 210,
+
+            // right of middle rung
+            100, 70, 210,
+            100, 70, 210,
+            100, 70, 210,
+            100, 70, 210,
+            100, 70, 210,
+            100, 70, 210,
+
+            // bottom of middle rung.
+            76, 210, 100,
+            76, 210, 100,
+            76, 210, 100,
+            76, 210, 100,
+            76, 210, 100,
+            76, 210, 100,
+
+            // right of bottom
+            140, 210, 80,
+            140, 210, 80,
+            140, 210, 80,
+            140, 210, 80,
+            140, 210, 80,
+            140, 210, 80,
+
+            // bottom
+            90, 130, 110,
+            90, 130, 110,
+            90, 130, 110,
+            90, 130, 110,
+            90, 130, 110,
+            90, 130, 110,
+
+            // left side
+            160, 160, 220,
+            160, 160, 220,
+            160, 160, 220,
+            160, 160, 220,
+            160, 160, 220,
+            160, 160, 220
+        ];
+
+        // LEARN ABOUT IT
+        let ptr_mem_loc = colors.as_ptr(); // 4 bytes each (1 byte each)
+        log(&format!("ptr_mem_loc: {:?} ", ptr_mem_loc));
+        let coords_ptr = js_sys::Uint8Array::new(&memory_buffer)
+            .subarray(ptr_mem_loc as u32, ptr_mem_loc as u32 + colors.len() as u32);
+
+        self.gl_2.vertex_attrib_pointer_with_i32(
+            self.a_color as u32, 
+            3, 
+            Gl::UNSIGNED_BYTE, 
+            true, 
+            0, 
+            0,
+        );
+
+        self.gl_2.buffer_data_with_array_buffer_view(Gl::ARRAY_BUFFER, &coords_ptr, Gl::STATIC_DRAW);
+        self.gl_2.enable_vertex_attrib_array(self.a_color as u32);
+        
+        self.draw(geom.len() as i32 / 3, Gl::TRIANGLES, Canvas::Canvas2);
+        
+        
+        // BLUE CANVAS
+        self.gl.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+        let _should_redraw = resize_canvas_to_display_size(&self.gl, &self.canvas_elem);
+        
+        self.gl.uniform2f(Some(&self.u_resolution), self.canvas_elem.width() as f32 as f32, self.canvas_elem.height() as f32);
+     
+        let positions_buffer = self.gl.create_buffer().unwrap();
+        
+        let coords = self.get_flatten_coords();
+        self.set_geometry(Canvas::Canvas1, &coords, &positions_buffer, &memory_buffer, self.a_position, 2); // can i move the coords into function?
+        
+
+        // SET TEXTURE        
+        let text_coord_buffer = self.gl.create_buffer().unwrap();
+        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&text_coord_buffer));
+
+        let texture_coords: [f32; 60] = [
+            0.0,  0.0,
+            1.0,  0.0,
+            0.0,  1.0,
+            0.0,  1.0,
+            1.0,  0.0,
+            1.0,  1.0,
+            0.0,  0.0,
+            1.0,  0.0,
+            0.0,  1.0,
+            0.0,  1.0,
+            1.0,  0.0,
+            1.0,  1.0,
+            0.0,  0.0,
+            1.0,  0.0,
+            0.0,  1.0,
+            0.0,  1.0,
+            1.0,  0.0,
+            1.0,  1.0,
+            0.0,  0.0,
+            1.0,  0.0,
+            0.0,  1.0,
+            0.0,  1.0,
+            1.0,  0.0,
+            1.0,  1.0,
+            0.0,  0.0,
+            1.0,  0.0,
+            0.0,  1.0,
+            0.0,  1.0,
+            1.0,  0.0,
+            1.0,  1.0,
+        ];
+
+        
+        self.gl.vertex_attrib_pointer_with_i32(
+            self.a_text_coord as u32, 
+            2, 
+            Gl::FLOAT, 
+            false, 
+            0, 
+            0,
+        );
+
+        let ptr_mem_loc = texture_coords.as_ptr() as u32 / 4;
+        self.gl.buffer_data_with_array_buffer_view(
+            Gl::ARRAY_BUFFER, 
+            &js_sys::Float32Array::new(&memory_buffer)
+            .subarray(ptr_mem_loc, ptr_mem_loc + texture_coords.len() as u32), 
+            Gl::DYNAMIC_DRAW
+        );
+        
+        self.gl.enable_vertex_attrib_array(self.a_text_coord as u32);
+
+        let texture = self.gl.create_texture().unwrap();
+        self.gl.bind_texture(Gl::TEXTURE_2D, Some(&texture));
+
+        self.gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::CLAMP_TO_EDGE as i32);
+        self.gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_T, Gl::CLAMP_TO_EDGE as i32);
+        self.gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MIN_FILTER, Gl::NEAREST as i32);
+        self.gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MAG_FILTER, Gl::NEAREST as i32);
+
+        self.gl.tex_image_2d_with_u32_and_u32_and_image(
+            Gl::TEXTURE_2D,
+            0,
+            Gl::RGBA as i32,
+            Gl::RGBA,
+            Gl::UNSIGNED_BYTE,
+            &self.image,
+        ).unwrap();
+
+        let translation_mat = Geometry::translation_mat(0., 0.);
+        self.gl.uniform_matrix3fv_with_f32_array(Some(&self.u_translation), false, &translation_mat);
+        let rotation_mat = Geometry::rotation_mat((*self.mouse_angle.try_borrow().unwrap()).into());
+        self.gl.uniform_matrix3fv_with_f32_array(Some(&self.u_rotation), false, &rotation_mat);
+
+        self.draw(coords.len() as i32 / 2, Gl::TRIANGLES, Canvas::Canvas1);
+
+        self.gl.delete_texture(Some(&texture));
+       
+    }
+
+    fn set_geometry(&self, use_canvas: Canvas, coords: &[f32], positions_buffer: &WebGlBuffer, memory_buffer: &JsValue, a_positions: i32, size: i32) {
+        let gl: &WebGlRenderingContext;
+
+        match use_canvas {
+            Canvas::Canvas1 => {
+                gl = &self.gl;
+            },
+            Canvas::Canvas2 => {
+                gl = &self.gl_2;
+            },
+        }
+
+        gl.bind_buffer(Gl::ARRAY_BUFFER, Some(positions_buffer));
+        
+        let ptr_mem_loc = coords.as_ptr() as u32 / 4; // 4 bytes each
+        let coords_ptr = js_sys::Float32Array::new(memory_buffer)
+            .subarray(ptr_mem_loc, ptr_mem_loc + coords.len() as u32);
+
+        gl.vertex_attrib_pointer_with_i32(
+            a_positions as u32, 
+            size, 
+            Gl::FLOAT, 
+            false, 
+            0, 
+            0,
+        );
+
+        gl.buffer_data_with_array_buffer_view(Gl::ARRAY_BUFFER, &coords_ptr, Gl::STATIC_DRAW);
+        gl.enable_vertex_attrib_array(a_positions as u32);
+    }
+    
+    fn get_center_canvas(canvas: &HtmlCanvasElement) -> (f32, f32) {
+        let center_x = (canvas.client_width() / 2) as f32;
+        let center_y = (canvas.client_height() / 2) as f32;
+
+        (center_x, center_y)
+    }
+
+    
+    fn draw(&self, vert_count: i32, mode: u32, canvas: Canvas) {
+        match canvas {
+            Canvas::Canvas1 => {
+                self.gl.draw_arrays(mode, 0, vert_count);
+            },
+            Canvas::Canvas2 => {
+                self.gl_2.draw_arrays(mode, 0, vert_count);
+            },
+        }
+    }
+}
+
+enum Canvas {
+    Canvas1,
+    Canvas2
+}
