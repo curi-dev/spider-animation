@@ -6,10 +6,14 @@ pub const SHADER: &str = r#"
 
     varying vec4 vColor;
 
+    //out vec4 outPositions;
+
     void main() {
         gl_Position = uMatrix * aPosition;
 
         vColor = aColor;
+
+        //outPositions = gl_Position;
     }
 "#;
 

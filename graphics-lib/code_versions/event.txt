@@ -1,0 +1,38 @@
+// NOW I HAVE THE TWO POINTERS MODIFYING THE VALUE (?)
+        // let closure = Closure::wrap(Box::new(move // move to events module (?)
+        //     |event: web_sys::KeyboardEvent| {
+            
+        //     let key_code = event.key_code();
+        //     log(&format!("keycode: {:?} ", key_code));
+
+        //     if key_code == 39 {
+        //         let x_rotation_angle = *x_rotation.borrow_mut();
+
+        //         log(&format!("[MORE] x_rotation_angle: {} ", x_rotation_angle));
+
+        //         *x_rotation.borrow_mut() = x_rotation_angle + 5.;
+        //     }
+
+        //     if key_code == 37 {
+        //         let z_rotation_angle = *z_rotation.borrow_mut();
+
+        //         log(&format!("[MINUS] x_rotation_angle: {} ", z_rotation_angle));
+                
+        //         *z_rotation.borrow_mut() = z_rotation_angle - 5.;
+        //     }
+
+        //     if key_code == 38 {
+        //         let y_rotation_angle = *y_rotation.borrow_mut();
+                
+        //         *y_rotation.borrow_mut() = y_rotation_angle + 5.;
+        //     }
+
+        //     if key_code == 40 {
+        //         let y_rotation_angle = *y_rotation.borrow_mut();
+                
+        //         *y_rotation.borrow_mut() = y_rotation_angle - 5.;
+        //     }
+        // }) as Box<dyn FnMut(_)>);
+
+        // canvas.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref()).unwrap(); // ?
+        // closure.forget();
