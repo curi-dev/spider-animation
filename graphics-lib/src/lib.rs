@@ -13,6 +13,7 @@ mod programs;
 mod webgl_utils;
 mod setup_ui_control;
 mod spider;
+mod data_structures;
 
 use setup::initialize_webgl_context;
 use modules::m4::m4::M4 as m4;
@@ -108,14 +109,16 @@ impl GraphicsClient {
         let mut upper_leg_model_matrix = m4::projection(self.canvas.client_width() as f32, self.canvas.client_height() as f32, 600.);
         
         // translations for scene graph
+
+        // initial displacement
         upper_leg_model_matrix = m4::translate_3_d(upper_leg_model_matrix, m4::translation(
-            self.spider.get_curr_pivot_point_of_upper_leg().0, 
+            self.spider.get_curr_pivot_point_of_upper_leg().0, // make it more semantic
             self.spider.get_curr_pivot_point_of_upper_leg().1, 
             self.spider.get_curr_pivot_point_of_upper_leg().2
         ));
 
         let mut middle_leg_model_matrix = m4::translate_3_d(upper_leg_model_matrix, m4::translation(
-            - self.spider.pivot_point.0 * 2.,
+            - self.spider.initial_displacement_x,
             0.,
             0.
         ));

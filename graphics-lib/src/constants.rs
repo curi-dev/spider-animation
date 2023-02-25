@@ -1,0 +1,9 @@
+pub const FRONTAL_UPPER_LEG_SIZE: f32 = 0.;
+pub const FRONTAL_MIDDLE_LEG_SIZE: f32 = 0.;
+pub const FRONTAL_BOTTOM_LEG_SIZE: f32 = 0.;
+pub const MIDDLE_UPPER_LEG_SIZE: f32 = 0.;
+pub const MIDDLE_MIDDLE_LEG_SIZE: f32 = 0.;
+pub const MIDDLE_BOTTOM_LEG_SIZE: f32 = 0.;
+pub const BACK_UPPER_LEG_SIZE: f32 = 0.;
+pub const BACK_MIDDLE_LEG_SIZE: f32 = 0.;
+pub const BACK_BOTTOM_LEG_SIZE: f32 = 0.;
