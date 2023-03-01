@@ -179,6 +179,34 @@ function getStringFromWasm0(ptr, len) {
     return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
 }
 
+function makeMutClosure(arg0, arg1, dtor, f) {
+    const state = { a: arg0, b: arg1, cnt: 1, dtor };
+    const real = (...args) => {
+        // First up with a closure we increment the internal reference
+        // count. This ensures that the Rust closure environment won't
+        // be deallocated while we're invoking it.
+        state.cnt++;
+        const a = state.a;
+        state.a = 0;
+        try {
+            return f(a, state.b, ...args);
+        } finally {
+            if (--state.cnt === 0) {
+                wasm.__wbindgen_export_2.get(state.dtor)(a, state.b);
+
+            } else {
+                state.a = a;
+            }
+        }
+    };
+    real.original = state;
+
+    return real;
+}
+function __wbg_adapter_16(arg0, arg1, arg2) {
+    wasm._dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__hd4f7e37e804e2bcc(arg0, arg1, addHeapObject(arg2));
+}
+
 function isLikeNone(x) {
     return x === undefined || x === null;
 }
@@ -302,6 +330,10 @@ export function __wbg_setheight_3eb8729b59493242(arg0, arg1) {
 export function __wbg_getContext_4d5e97892c1b206a() { return handleError(function (arg0, arg1, arg2) {
     const ret = getObject(arg0).getContext(getStringFromWasm0(arg1, arg2));
     return isLikeNone(ret) ? 0 : addHeapObject(ret);
+}, arguments) };
+
+export function __wbg_addEventListener_cbe4c6f619b032f3() { return handleError(function (arg0, arg1, arg2, arg3) {
+    getObject(arg0).addEventListener(getStringFromWasm0(arg1, arg2), getObject(arg3));
 }, arguments) };
 
 export function __wbg_clientWidth_999b9163952471ee(arg0) {
@@ -436,6 +468,11 @@ export function __wbg_viewport_a93f3881c4202d5e(arg0, arg1, arg2, arg3, arg4) {
     getObject(arg0).viewport(arg1, arg2, arg3, arg4);
 };
 
+export function __wbg_keyCode_72faed4278f77f2c(arg0) {
+    const ret = getObject(arg0).keyCode;
+    return ret;
+};
+
 export function __wbg_newnoargs_b5b063fc6c2f0376(arg0, arg1) {
     const ret = new Function(getStringFromWasm0(arg0, arg1));
     return addHeapObject(ret);
@@ -551,6 +588,11 @@ export function __wbindgen_throw(arg0, arg1) {
 
 export function __wbindgen_memory() {
     const ret = wasm.memory;
+    return addHeapObject(ret);
+};
+
+export function __wbindgen_closure_wrapper123(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 8, __wbg_adapter_16);
     return addHeapObject(ret);
 };
 

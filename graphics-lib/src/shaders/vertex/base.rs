@@ -9,6 +9,9 @@ pub const SHADER: &str = r#"
     //out vec4 outPositions;
 
     void main() {
+        //float zToDivideBy = 1.0 + aPosition.z;
+        //float zToDivideBy = 1.0;
+        //gl_Position = uMatrix * vec4(aPosition.xy / zToDivideBy, aPosition.zw);
         gl_Position = uMatrix * aPosition;
 
         vColor = aColor;
@@ -18,27 +21,6 @@ pub const SHADER: &str = r#"
 "#;
 
 
-// pub const SHADER: &str = r#"
-//     attribute vec2 aPosition;
-//     attribute vec2 aTextCoords;
-    
-//     uniform mat3 uTranslation;
-//     uniform mat3 uRotation;
-//     uniform vec2 uResolution;
 
-//     varying vec2 vTextCoords;
-
-//     void main() {
-//         vec2 clipSpace = (aPosition / uResolution) * 2.0 - 1.0;
-        
-//         vec2 translatedPositions = (uTranslation * vec3(clipSpace, 1)).xy;
-//         vec2 rotatedPositions = (uRotation * vec3(translatedPositions, 1)).xy;
- 
-//         gl_Position = vec4(rotatedPositions, 0, 1);
-//         gl_PointSize = 5.;
-        
-//         vTextCoords = aTextCoords;
-//     }
-// "#;
 
 

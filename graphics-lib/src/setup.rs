@@ -1,5 +1,9 @@
-use wasm_bindgen::{JsCast, JsValue};
-use web_sys::WebGlRenderingContext;
+use std::{cell::RefCell, rc::Rc};
+
+use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
+use web_sys::{WebGlRenderingContext, HtmlCanvasElement};
+
+use crate::log;
 
 
 pub fn initialize_webgl_context() -> Result<(WebGlRenderingContext, web_sys::HtmlCanvasElement), JsValue> {
@@ -12,6 +16,7 @@ pub fn initialize_webgl_context() -> Result<(WebGlRenderingContext, web_sys::Htm
     
     let canvas: web_sys::HtmlCanvasElement = canvas.dyn_into::<web_sys::HtmlCanvasElement>()?;
 
+
     let gl = canvas
         .get_context("webgl")? // without ? does not compile
         .unwrap()
@@ -23,3 +28,4 @@ pub fn initialize_webgl_context() -> Result<(WebGlRenderingContext, web_sys::Htm
  
     Ok((gl, canvas))
 }
+

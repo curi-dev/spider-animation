@@ -12,7 +12,7 @@ export const Container = styled.div`
 
     canvas {
         width: 100%;
-        height: 450px;
+        height: 100%;
         //height: 100%;
         /* width: 900px;
         height: 700px; */

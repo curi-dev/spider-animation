@@ -13,15 +13,18 @@ impl M4 {
         projection_mat
     }
 
-    pub fn identity() -> [f32; 16] {
-        let identity_mat = [
-            1., 0., 0., 0.,
-            0., 1., 0., 0.,
-            0., 0., 1., 0.,
-            0., 0., 0., 1.,
+    pub fn perspective(field_of_view_in_radians: f32, aspect: f32, near: f32, far: f32) -> [f32; 16] {
+        let f = ((3.14 * 0.5 - 0.5 * field_of_view_in_radians) as f64).tan();
+        let range_inv = 1. / (near - far);
+
+        let perspective_mat = [
+            f as f32 / aspect, 0., 0., 0.,
+            0., f as f32, 0., 0.,
+            0., 0., (near + far) * range_inv, -1.,
+            0., 0., near * far * range_inv * 2., 0. 
         ];
 
-        identity_mat
+        perspective_mat
     }
 
     pub fn translate_3_d(pre_matrix: [f32; 16], translation_mat: [f32; 16]) -> [f32; 16] {
