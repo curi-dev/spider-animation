@@ -150,12 +150,12 @@ impl GraphicsClient {
         
         ///////////////////////////////////////////////////////////////////////////////////////////
         
-        let mut middle_leg_model_matrix = m4::translate_3_d(
+        let middle_leg_model_matrix = m4::translate_3_d(
             upper_leg_model_matrix, 
             m4::translation(
             FRONTAL_MIDDLE_LEG_WIDTH * -1., // adjust distance by width 
-            0., // same y
-            (LEG_DEPTH / 2.) * -1. // adjust depth (1.5) - do not need to have same depth because only upper is rotating by its center
+            FRONTAL_UPPER_LEG_BIG_HEIGHT / 2. - FRONTAL_MIDDLE_LEG_BIG_HEIGHT / 2., // same y
+            LEG_DEPTH / 2. - MIDDLE_LEG_DEPTH / 2. // adjust depth (1.5) - do not need to have same depth because only upper is rotating by its center
             )
         );
        
@@ -180,17 +180,34 @@ impl GraphicsClient {
         //     (FRONTAL_MIDDLE_LEG_SMALL_HEIGHT / 2.) * -1.,
         //     0.
         // ));
-
-        let mut bottom_leg_model_matrix = m4::translate_3_d(
-            middle_leg_model_matrix, 
+        
+        let mut bottom_leg_model_matrix = m4::z_rotate_3_d(middle_leg_model_matrix, m4::z_rotation(deg_to_rad(180.).into()));    
+        bottom_leg_model_matrix = m4::translate_3_d(
+            bottom_leg_model_matrix, 
             m4::translation(
-            FRONTAL_BOTTOM_LEG_WIDTH * -1.,
-            FRONTAL_MIDDLE_LEG_BIG_HEIGHT / 2.,
             0.,
+            ((FRONTAL_MIDDLE_LEG_BIG_HEIGHT / 2.) + (FRONTAL_BOTTOM_LEG_HEIGHT / 2.)) * -1.,
+            (MIDDLE_LEG_DEPTH / 2.) - (BASE_LEG_DEPTH / 2.), // thats the diff between the 2 centers 
             )
         );
-       
-        //bottom_leg_model_matrix = m4::z_rotate_3_d(bottom_leg_model_matrix, m4::z_rotation(deg_to_rad(self.spider.z_acc_rotation * -1.).into()));    
+        // bottom_leg_model_matrix = m4::translate_3_d(
+        //     bottom_leg_model_matrix,
+        //     m4::translation(
+        //         FRONTAL_BOTTOM_LEG_WIDTH, 
+        //         0., 
+        //         0.
+        //     )
+        // );
+        // bottom_leg_model_matrix = m4::translate_3_d(
+        //     bottom_leg_model_matrix,
+        //     m4::translation(
+        //         0., 
+        //         - FRONTAL_MIDDLE_LEG_BIG_HEIGHT / 2., 
+        //         0.
+        //     )
+        // );
+
+
         self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, &upper_leg_model_matrix);
 
         let colors_buffer = self.gl.create_buffer().unwrap(); // it leaves inside rust? (try to transfer into the function)
