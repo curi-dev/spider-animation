@@ -190,7 +190,7 @@ pub fn get_colors() -> [u8; 108] {
     colors
 }
 
-pub fn get_body_colors() -> [u8; 90] {
+pub fn get_body_colors() -> [u8; 126] {
     let colors = [
         // side one
         76, 210, 100,
@@ -231,12 +231,28 @@ pub fn get_body_colors() -> [u8; 90] {
         26, 110, 210,
         26, 110, 210,
         26, 110, 210,
+
+        // up side
+        76, 10, 0,
+        76, 10, 0,
+        76, 10, 0,
+        76, 10, 0,
+        76, 10, 0,
+        76, 10, 0,
+
+        // down side
+        6, 10, 100,
+        6, 10, 100,
+        6, 10, 100,
+        6, 10, 100,
+        6, 10, 100,
+        6, 10, 100,
     ];
 
     colors
 }
 
-pub fn get_body_data() -> [f32; 90] {
+pub fn get_body_data() -> [f32; 126] {
     let body_data = [
         // side one
         0., 0., 0.,
@@ -249,12 +265,12 @@ pub fn get_body_data() -> [f32; 90] {
 
         // side two
         0., 0., 20., // depth
-        0., 17., 20., // height, depth
         20., 0., 20., // width, depth
+        0., 17., 20., // height, depth
         
         20., 0., 20., // width, depth
-        0., 17., 20., // height, depth
         20., 17., 20., // width, height, depth
+        0., 17., 20., // height, depth
 
         // convergent 1 to between A
         20., 0., 0., // width
@@ -282,6 +298,24 @@ pub fn get_body_data() -> [f32; 90] {
         24.5, 0., 20. - (20. / 3.),
         24.5, 17., 20. / 3.,
         24.5, 17., 20. - (20. / 3.),
+        
+        // down red side
+        0., 0., 0.,
+        20., 0., 0.,
+        0., 0., 20.,
+
+        0., 0., 20.,
+        20., 0., 0.,
+        20., 0., 20.,
+
+        // up side
+        0., 17., 20.,
+        20., 17., 20.,
+        0., 17., 0.,
+
+        0., 17., 0.,
+        20., 17., 20.,
+        20., 17., 0.,
     ];
 
     body_data
