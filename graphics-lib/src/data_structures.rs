@@ -190,7 +190,7 @@ pub fn get_colors() -> [u8; 108] {
     colors
 }
 
-pub fn get_body_colors() -> [u8; 126] {
+pub fn get_body_colors() -> [u8; 270] {
     let colors = [
         // side one
         76, 210, 100,
@@ -247,12 +247,90 @@ pub fn get_body_colors() -> [u8; 126] {
         6, 10, 100,
         6, 10, 100,
         6, 10, 100,
+
+        // triangle one up side close
+        0, 0, 100,
+        0, 0, 100,
+        0, 0, 100,
+
+        // triangle two up side close
+        200, 0, 100,
+        200, 0, 100,
+        200, 0, 100,
+
+        // close between one
+        30, 80, 44,
+        30, 80, 44,
+        30, 80, 44,
+
+        // CLOSE BETWEEN DOWN 
+
+        // close between one
+        70, 5, 144,
+        70, 5, 144,
+        70, 5, 144,
+
+        // triangle one up side close
+        0, 0, 100,
+        0, 0, 100,
+        0, 0, 100,
+
+        // triangle two up side close
+        200, 0, 100,
+        200, 0, 100,
+        200, 0, 100,
+
+        // close between one
+        30, 80, 44,
+        30, 80, 44,
+        30, 80, 44,
+
+        // close between one
+        70, 5, 144,
+        70, 5, 144,
+        70, 5, 144,
+
+        // close between one
+        200, 15, 44,
+        200, 15, 44,
+        200, 15, 44,
+
+        // close between one
+        200, 15, 44,
+        200, 15, 44,
+        200, 15, 44,
+
+        // close between one
+        216, 1, 24,
+        216, 1, 24,
+        216, 1, 24,
+
+        // close between one
+        216, 1, 24,
+        216, 1, 24,
+        216, 1, 24,
+
+        // close between one
+        26, 110, 210,
+        26, 110, 210,
+        26, 110, 210,
+        26, 110, 210,
+        26, 110, 210,
+        26, 110, 210,
+ 
+        // close between one
+        76, 210, 100,
+        76, 210, 100,
+        76, 210, 100,
+        76, 210, 100,
+        76, 210, 100,
+        76, 210, 100,
     ];
 
     colors
 }
 
-pub fn get_body_data() -> [f32; 126] {
+pub fn get_body_data() -> [f32; 270] {
     let body_data = [
         // side one
         0., 0., 0.,
@@ -299,7 +377,7 @@ pub fn get_body_data() -> [f32; 126] {
         24.5, 17., 20. / 3.,
         24.5, 17., 20. - (20. / 3.),
         
-        // down red side
+        // down side (red)
         0., 0., 0.,
         20., 0., 0.,
         0., 0., 20.,
@@ -308,7 +386,7 @@ pub fn get_body_data() -> [f32; 126] {
         20., 0., 0.,
         20., 0., 20.,
 
-        // up side
+        // up side (blue)
         0., 17., 20.,
         20., 17., 20.,
         0., 17., 0.,
@@ -316,6 +394,84 @@ pub fn get_body_data() -> [f32; 126] {
         0., 17., 0.,
         20., 17., 20.,
         20., 17., 0.,
+
+        // CLOSE BETWEEN UP
+
+        // triangle one up side close
+        20., 17., 0.,
+        20., 17., 20. / 3., // width plus offset - offset /
+        24.5, 17., 20. / 3.,
+
+        // triangle two up side close
+        20., 17., 20.,
+        24.5, 17., 20. - 20. / 3.,
+        20., 17., 20. - 20. / 3., // width plus offset - offset /
+
+        // close between one & two
+        20., 17., 20. / 3., // width plus offset - offset /
+        20., 17., 20. - 20. / 3.,
+        24.5, 17., 20. / 3.,
+        
+        24.5, 17., 20. / 3.,
+        20., 17., 20. - 20. / 3.,
+        24.5, 17., 20. - 20. / 3.,
+
+        // CLOSE BETWEEN DOWN
+
+        // triangle one down side close
+        20., 0., 0.,
+        24.5, 0., 20. / 3.,
+        20., 0., 20. / 3., // width plus offset - offset /
+
+        // triangle two down side close
+        20., 0., 20.,
+        20., 0., 20. - 20. / 3., // width plus offset - offset /
+        24.5, 0., 20. - 20. / 3.,
+
+        // close between one & two
+        20., 0., 20. / 3., // width plus offset - offset /
+        24.5, 0., 20. / 3.,       
+        20., 0., 20. - 20. / 3.,
+      
+        24.5, 0., 20. / 3.,
+        24.5, 0., 20. - 20. / 3.,
+        20., 0., 20. - 20. / 3.,
+
+        // tail convergent one
+        0., 0., 20.,
+        -2.5, 17., 20. - 20. / 2.,
+        -2.5, 0., 20. - 20. / 2.,
+        
+        0., 17., 20.,
+        -2.5, 17., 20. - 20. / 2.,
+        0., 0., 20.,
+
+        // tail convergent two
+        -2.5, 0., 20. / 2.,
+        -2.5, 17., 20. / 2.,
+        0., 0., 0.,
+        
+        0., 17., 0.,
+        0., 0., 0.,
+        -2.5, 17., 20. / 2.,
+        
+        // tail close triangle up
+        0., 17., 0.,
+        -2.5, 17., 20. -  20. / 2.,
+        0., 17., 20. -  20. / 2.,
+        
+        0., 17., 20. -  20. / 2.,
+        -2.5, 17., 20. -  20. / 2.,
+        0., 17., 20.,
+
+        // tail close triangle down
+        0., 0., 0.,
+        0., 0., 20. -  20. / 2.,
+        -2.5, 0., 20. -  20. / 2.,
+        
+        0., 0., 20. -  20. / 2.,
+        0., 0., 20.,
+        -2.5, 0., 20. -  20. / 2.,
     ];
 
     body_data

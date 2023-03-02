@@ -44,8 +44,8 @@ pub struct Spider {
     pub move_range: Range<f32>,
     pub colors: [u8; 108],
     pub base_leg_colors: [u8; 54],
-    pub body_colors: [u8; 126],
-    pub body_data: [f32; 126], // separate body
+    pub body_colors: [u8; 270],
+    pub body_data: [f32; 270], // separate body
     pub speed: f32,
     pub x_acc_rotation: f32,
     pub y_acc_rotation: f32,
