@@ -1,8 +1,8 @@
-use crate::spider::LegPosition;
+use crate::spider::LegType;
 use crate::constants::*;
 
-fn get_upper_or_middle_leg_data(width: f32, big_height: f32, small_height: f32, depth: f32) -> [f32; 108] {
-    let upper_leg_data: [f32; 108] = [
+fn get_upper_or_middle_leg_data(width: f32, big_height: f32, small_height: f32, depth: f32) -> Vec<f32> {
+    let upper_leg_data = vec![
         // front side face          
         0., 0., 0.,
         0., big_height, 0.,
@@ -61,10 +61,10 @@ fn get_upper_or_middle_leg_data(width: f32, big_height: f32, small_height: f32, 
     upper_leg_data
 }
 
-fn get_bottom_leg_data(width: f32, height: f32, depth: f32) -> [f32; 54] {
+fn get_bottom_leg_data(width: f32, height: f32, depth: f32) -> Vec<f32> {
     let apex = (width, height / 2., depth / 2.);
     
-    let bottom_leg_data = [
+    let bottom_leg_data =vec![
         // front side face
         0., 0., 0.,
         0., height, 0.,
@@ -232,7 +232,7 @@ pub fn get_body_colors() -> [u8; 270] {
         26, 110, 210,
         26, 110, 210,
 
-        // up side
+        // upside
         76, 10, 0,
         76, 10, 0,
         76, 10, 0,
@@ -240,7 +240,7 @@ pub fn get_body_colors() -> [u8; 270] {
         76, 10, 0,
         76, 10, 0,
 
-        // down side
+        // downside
         6, 10, 100,
         6, 10, 100,
         6, 10, 100,
@@ -280,37 +280,31 @@ pub fn get_body_colors() -> [u8; 270] {
         200, 0, 100,
         200, 0, 100,
 
-        // close between one
+        // close between one & two
         30, 80, 44,
         30, 80, 44,
         30, 80, 44,
-
-        // close between one
         70, 5, 144,
         70, 5, 144,
         70, 5, 144,
 
-        // close between one
+        // tail convergent one
+        200, 15, 44,
+        200, 15, 44,
+        200, 15, 44,
         200, 15, 44,
         200, 15, 44,
         200, 15, 44,
 
-        // close between one
-        200, 15, 44,
-        200, 15, 44,
-        200, 15, 44,
-
-        // close between one
+        // tail convergent two
+        216, 1, 24,
+        216, 1, 24,
+        216, 1, 24,
         216, 1, 24,
         216, 1, 24,
         216, 1, 24,
 
-        // close between one
-        216, 1, 24,
-        216, 1, 24,
-        216, 1, 24,
-
-        // close between one
+        // tail close triangle up
         26, 110, 210,
         26, 110, 210,
         26, 110, 210,
@@ -318,7 +312,7 @@ pub fn get_body_colors() -> [u8; 270] {
         26, 110, 210,
         26, 110, 210,
  
-        // close between one
+        // tail close triangle down
         76, 210, 100,
         76, 210, 100,
         76, 210, 100,
@@ -334,222 +328,231 @@ pub fn get_body_data() -> [f32; 270] {
     let body_data = [
         // side one
         0., 0., 0.,
-        0., 17., 0., // height
-        20., 0., 0., // width
+        0., BODY_HEIGHT, 0., // height
+        BODY_WIDTH, 0., 0., // width
         
-        20., 0., 0., // width
-        0., 17., 0., // height
-        20., 17., 0., // width, height
+        BODY_WIDTH, 0., 0., // width
+        0., BODY_HEIGHT, 0., // height
+        BODY_WIDTH, BODY_HEIGHT, 0., // width, height
 
         // side two
-        0., 0., 20., // depth
-        20., 0., 20., // width, depth
-        0., 17., 20., // height, depth
+        0., 0., BODY_DEPTH, // depth
+        BODY_WIDTH, 0., BODY_DEPTH, // width, depth
+        0., BODY_HEIGHT, BODY_DEPTH, // height, depth
         
-        20., 0., 20., // width, depth
-        20., 17., 20., // width, height, depth
-        0., 17., 20., // height, depth
+        BODY_WIDTH, 0., BODY_DEPTH, // width, depth
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH, // width, height, depth
+        0., BODY_HEIGHT, BODY_DEPTH, // height, depth
 
         // convergent 1 to between A
-        20., 0., 0., // width
-        20., 17., 0., // width, height
-        24.5, 0., 20. / 3., // width advance convergent (width + 10), height, depth / 2
+        BODY_WIDTH, 0., 0., // width
+        BODY_WIDTH, BODY_HEIGHT, 0., // width, height
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH / 3., // width advance convergent (width + 10), height, depth / 2
         
-        24.5, 0., 20. / 3., // width advance convergent, height, depth / 2
-        20., 17., 0.,
-        24.5, 17., 20. / 3.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH / 3., // width advance convergent, height, depth / 2
+        BODY_WIDTH, BODY_HEIGHT, 0.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH / 3.,
 
         // convergent 2 to between A
-        20., 0., 20., // width
-        24.5, 0., 20. - (20. / 3.), // width advance convergent (width + 10), height, depth / 2
-        20., 17., 20., // width, height
+        BODY_WIDTH, 0., BODY_DEPTH, // width
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH - (BODY_DEPTH / 3.), // width advance convergent (width + 10), height, depth / 2
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH, // width, height
         
-        24.5, 0., 20. - (20. / 3.), // width advance convergent, height, depth / 2
-        24.5, 17., 20. - (20. / 3.),
-        20., 17., 20.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH - (BODY_DEPTH / 3.), // width advance convergent, height, depth / 2
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH - (BODY_DEPTH / 3.),
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH,
 
         // between A
-        24.5, 0., 20. / 3.,
-        24.5, 17., 20. / 3.,
-        24.5, 0., 20. - (20. / 3.),
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH / 3.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH / 3.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH - (BODY_DEPTH / 3.),
 
-        24.5, 0., 20. - (20. / 3.),
-        24.5, 17., 20. / 3.,
-        24.5, 17., 20. - (20. / 3.),
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH - (BODY_DEPTH / 3.),
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH / 3.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH - (BODY_DEPTH / 3.),
         
-        // down side (red)
+        // upside (red)
         0., 0., 0.,
-        20., 0., 0.,
-        0., 0., 20.,
+        BODY_WIDTH, 0., 0.,
+        0., 0., BODY_DEPTH,
 
-        0., 0., 20.,
-        20., 0., 0.,
-        20., 0., 20.,
+        0., 0., BODY_DEPTH,
+        BODY_WIDTH, 0., 0.,
+        BODY_WIDTH, 0., BODY_DEPTH,
 
-        // up side (blue)
-        0., 17., 20.,
-        20., 17., 20.,
-        0., 17., 0.,
+        // downside (blue)
+        0., BODY_HEIGHT, BODY_DEPTH,
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH,
+        0., BODY_HEIGHT, 0.,
 
-        0., 17., 0.,
-        20., 17., 20.,
-        20., 17., 0.,
+        0., BODY_HEIGHT, 0.,
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH,
+        BODY_WIDTH, BODY_HEIGHT, 0.,
 
         // CLOSE BETWEEN UP
 
         // triangle one up side close
-        20., 17., 0.,
-        20., 17., 20. / 3., // width plus offset - offset /
-        24.5, 17., 20. / 3.,
+        BODY_WIDTH, BODY_HEIGHT, 0.,
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH / 3., 
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH / 3.,
 
         // triangle two up side close
-        20., 17., 20.,
-        24.5, 17., 20. - 20. / 3.,
-        20., 17., 20. - 20. / 3., // width plus offset - offset /
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH - BODY_DEPTH / 3.,
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH - BODY_DEPTH / 3., 
 
         // close between one & two
-        20., 17., 20. / 3., // width plus offset - offset /
-        20., 17., 20. - 20. / 3.,
-        24.5, 17., 20. / 3.,
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH / 3., 
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH - BODY_DEPTH / 3.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH / 3.,
         
-        24.5, 17., 20. / 3.,
-        20., 17., 20. - 20. / 3.,
-        24.5, 17., 20. - 20. / 3.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH / 3.,
+        BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH - BODY_DEPTH / 3.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH - BODY_DEPTH / 3.,
 
         // CLOSE BETWEEN DOWN
 
         // triangle one down side close
-        20., 0., 0.,
-        24.5, 0., 20. / 3.,
-        20., 0., 20. / 3., // width plus offset - offset /
+        BODY_WIDTH, 0., 0.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH / 3.,
+        BODY_WIDTH, 0., BODY_DEPTH / 3., 
 
         // triangle two down side close
-        20., 0., 20.,
-        20., 0., 20. - 20. / 3., // width plus offset - offset /
-        24.5, 0., 20. - 20. / 3.,
+        BODY_WIDTH, 0., BODY_DEPTH,
+        BODY_WIDTH, 0., BODY_DEPTH - BODY_DEPTH / 3., 
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH - BODY_DEPTH / 3.,
 
         // close between one & two
-        20., 0., 20. / 3., // width plus offset - offset /
-        24.5, 0., 20. / 3.,       
-        20., 0., 20. - 20. / 3.,
+        BODY_WIDTH, 0., BODY_DEPTH / 3., 
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH / 3.,       
+        BODY_WIDTH, 0., BODY_DEPTH - BODY_DEPTH / 3.,
       
-        24.5, 0., 20. / 3.,
-        24.5, 0., 20. - 20. / 3.,
-        20., 0., 20. - 20. / 3.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH / 3.,
+        BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 0., BODY_DEPTH - BODY_DEPTH / 3.,
+        BODY_WIDTH, 0., BODY_DEPTH - BODY_DEPTH / 3.,
 
         // tail convergent one
-        0., 0., 20.,
-        -2.5, 17., 20. - 20. / 2.,
-        -2.5, 0., 20. - 20. / 2.,
+        0., 0., BODY_DEPTH,
+        -BODY_BACK_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH - BODY_BACK_DEPTH_OFFSET,
+        -BODY_BACK_WIDTH_OFFSET, 0., BODY_DEPTH - BODY_BACK_DEPTH_OFFSET,
         
-        0., 17., 20.,
-        -2.5, 17., 20. - 20. / 2.,
-        0., 0., 20.,
+        0., BODY_HEIGHT, BODY_DEPTH,
+        -BODY_BACK_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH - BODY_BACK_DEPTH_OFFSET,
+        0., 0., BODY_DEPTH,
 
         // tail convergent two
-        -2.5, 0., 20. / 2.,
-        -2.5, 17., 20. / 2.,
+        -BODY_BACK_WIDTH_OFFSET, 0., BODY_DEPTH / 2.,
+        -BODY_BACK_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH / 2.,
         0., 0., 0.,
         
-        0., 17., 0.,
+        0., BODY_HEIGHT, 0.,
         0., 0., 0.,
-        -2.5, 17., 20. / 2.,
+        -BODY_BACK_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH / 2.,
         
         // tail close triangle up
-        0., 17., 0.,
-        -2.5, 17., 20. -  20. / 2.,
-        0., 17., 20. -  20. / 2.,
+        0., BODY_HEIGHT, 0.,
+        -BODY_BACK_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
+        0., BODY_HEIGHT, BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
         
-        0., 17., 20. -  20. / 2.,
-        -2.5, 17., 20. -  20. / 2.,
-        0., 17., 20.,
+        0., BODY_HEIGHT, BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
+        -BODY_BACK_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
+        0., BODY_HEIGHT, BODY_DEPTH,
 
         // tail close triangle down
         0., 0., 0.,
-        0., 0., 20. -  20. / 2.,
-        -2.5, 0., 20. -  20. / 2.,
+        0., 0., BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
+        -BODY_BACK_WIDTH_OFFSET, 0., BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
         
-        0., 0., 20. -  20. / 2.,
-        0., 0., 20.,
-        -2.5, 0., 20. -  20. / 2.,
+        0., 0., BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
+        0., 0., BODY_DEPTH,
+        -BODY_BACK_WIDTH_OFFSET, 0., BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
     ];
 
     body_data
 }
 
-pub fn get_leg_data(leg_position: &LegPosition) -> ([f32; 108], [f32; 108], [f32; 54]) {
+pub fn get_leg_data(leg_position: &LegType) -> Vec<Vec<f32>> {
 
-    let frontal_upper_leg_width: f32;
-    let frontal_upper_leg_big_height: f32;
-    let frontal_upper_leg_small_height: f32;
-    let frontal_middle_leg_width: f32;
-    let frontal_middle_leg_big_height: f32;
-    let frontal_middle_leg_small_height: f32;
-    let frontal_bottom_leg_width: f32;
-    let frontal_bottom_leg_height: f32;
+    let upper_leg_width: f32;
+    let upper_leg_big_height: f32;
+    let upper_leg_small_height: f32;
+    let joint_leg_width: f32;
+    let joint_leg_big_height: f32;
+    let joint_leg_small_height: f32;
+    let base_leg_width: f32;
+    let base_leg_height: f32;
     let upper_leg_depth: f32;
-    let middle_leg_depth: f32;
+    let joint_leg_depth: f32;
     let base_leg_depth: f32;
     
     match leg_position {       
-        LegPosition::Frontal => {
-            frontal_upper_leg_width = FRONTAL_UPPER_LEG_WIDTH;
-            frontal_upper_leg_big_height = FRONTAL_UPPER_LEG_BIG_HEIGHT;
-            frontal_upper_leg_small_height = FRONTAL_UPPER_LEG_SMALL_HEIGHT;
-            frontal_middle_leg_width = FRONTAL_MIDDLE_LEG_WIDTH;
-            frontal_middle_leg_big_height = FRONTAL_MIDDLE_LEG_BIG_HEIGHT;
-            frontal_middle_leg_small_height = FRONTAL_MIDDLE_LEG_SMALL_HEIGHT;
-            frontal_bottom_leg_width = FRONTAL_BOTTOM_LEG_WIDTH;
-            frontal_bottom_leg_height = FRONTAL_BOTTOM_LEG_HEIGHT;
-            upper_leg_depth = LEG_DEPTH;
-            middle_leg_depth = MIDDLE_LEG_DEPTH;
-            base_leg_depth = BASE_LEG_DEPTH;
+        LegType::Frontal => {
+            upper_leg_width = FRONTAL_UPPER_LEG_WIDTH;
+            upper_leg_big_height = FRONTAL_UPPER_LEG_BIG_HEIGHT;
+            upper_leg_small_height = FRONTAL_UPPER_LEG_SMALL_HEIGHT;
+            
+            joint_leg_width = FRONTAL_JOINT_LEG_WIDTH;
+            joint_leg_big_height = FRONTAL_JOINT_LEG_BIG_HEIGHT;
+            joint_leg_small_height = FRONTAL_JOINT_LEG_SMALL_HEIGHT;
+            
+            base_leg_width = FRONTAL_BOTTOM_LEG_WIDTH;
+            base_leg_height = FRONTAL_BOTTOM_LEG_HEIGHT;
+            
+            upper_leg_depth = FRONTAL_UPPER_LEG_DEPTH;
+            joint_leg_depth = FRONTAL_JOINT_LEG_DEPTH;
+            base_leg_depth = FRONTAL_BASE_LEG_DEPTH;
         },
-        LegPosition::Back => {
-            frontal_upper_leg_width = FRONTAL_UPPER_LEG_WIDTH;
-            frontal_upper_leg_big_height = FRONTAL_UPPER_LEG_BIG_HEIGHT;
-            frontal_upper_leg_small_height = FRONTAL_UPPER_LEG_SMALL_HEIGHT;
-            frontal_middle_leg_width = FRONTAL_MIDDLE_LEG_WIDTH;
-            frontal_middle_leg_big_height = FRONTAL_MIDDLE_LEG_BIG_HEIGHT;
-            frontal_middle_leg_small_height = FRONTAL_MIDDLE_LEG_SMALL_HEIGHT;
-            frontal_bottom_leg_width = FRONTAL_BOTTOM_LEG_WIDTH;
-            frontal_bottom_leg_height = FRONTAL_BOTTOM_LEG_HEIGHT;
-            upper_leg_depth = LEG_DEPTH;
-            middle_leg_depth = MIDDLE_LEG_DEPTH;
-            base_leg_depth = BASE_LEG_DEPTH;
+        LegType::Back => {
+            upper_leg_width = BACK_UPPER_LEG_WIDTH;
+            upper_leg_big_height = BACK_UPPER_LEG_BIG_HEIGHT;
+            upper_leg_small_height = BACK_UPPER_LEG_SMALL_HEIGHT;
+            
+            joint_leg_width = BACK_JOINT_LEG_WIDTH;
+            joint_leg_big_height = BACK_JOINT_LEG_BIG_HEIGHT;
+            joint_leg_small_height = BACK_JOINT_LEG_SMALL_HEIGHT;
+            
+            base_leg_width = BACK_BASE_LEG_WIDTH;
+            base_leg_height = BACK_BASE_LEG_HEIGHT;
+            
+            upper_leg_depth = BACK_UPPER_LEG_DEPTH;
+            joint_leg_depth = BACK_JOINT_LEG_DEPTH;
+            base_leg_depth = BACK_BASE_LEG_DEPTH;
         },
-        LegPosition::Middle => {
-            frontal_upper_leg_width = FRONTAL_UPPER_LEG_WIDTH;
-            frontal_upper_leg_big_height = FRONTAL_UPPER_LEG_BIG_HEIGHT;
-            frontal_upper_leg_small_height = FRONTAL_UPPER_LEG_SMALL_HEIGHT;
-            frontal_middle_leg_width = FRONTAL_MIDDLE_LEG_WIDTH;
-            frontal_middle_leg_big_height = FRONTAL_MIDDLE_LEG_BIG_HEIGHT;
-            frontal_middle_leg_small_height = FRONTAL_MIDDLE_LEG_SMALL_HEIGHT;
-            frontal_bottom_leg_width = FRONTAL_BOTTOM_LEG_WIDTH;
-            frontal_bottom_leg_height = FRONTAL_BOTTOM_LEG_HEIGHT;
-            upper_leg_depth = LEG_DEPTH;
-            middle_leg_depth = MIDDLE_LEG_DEPTH;
-            base_leg_depth = BASE_LEG_DEPTH;
+        LegType::Middle => {
+            upper_leg_width = FRONTAL_UPPER_LEG_WIDTH;
+            upper_leg_big_height = FRONTAL_UPPER_LEG_BIG_HEIGHT;
+            upper_leg_small_height = FRONTAL_UPPER_LEG_SMALL_HEIGHT;
+            
+            joint_leg_width = FRONTAL_JOINT_LEG_WIDTH;
+            joint_leg_big_height = FRONTAL_JOINT_LEG_BIG_HEIGHT;
+            joint_leg_small_height = FRONTAL_JOINT_LEG_SMALL_HEIGHT;
+            
+            base_leg_width = FRONTAL_BOTTOM_LEG_WIDTH;
+            base_leg_height = FRONTAL_BOTTOM_LEG_HEIGHT;
+            
+            upper_leg_depth = FRONTAL_UPPER_LEG_DEPTH;
+            joint_leg_depth = FRONTAL_JOINT_LEG_DEPTH;
+            base_leg_depth = FRONTAL_BASE_LEG_DEPTH;
         }       
     }
 
     let upper_leg_data = get_upper_or_middle_leg_data(
-        frontal_upper_leg_width,
-        frontal_upper_leg_big_height,
-        frontal_upper_leg_small_height,
+        upper_leg_width,
+        upper_leg_big_height,
+        upper_leg_small_height,
         upper_leg_depth
     );
     let middle_leg_data = get_upper_or_middle_leg_data(
-        frontal_middle_leg_width,
-        frontal_middle_leg_big_height,
-        frontal_middle_leg_small_height,
-        middle_leg_depth
+        joint_leg_width,
+        joint_leg_big_height,
+        joint_leg_small_height,
+        joint_leg_depth
     );
     let bottom_leg_data = get_bottom_leg_data(
-        frontal_bottom_leg_width, 
-        frontal_bottom_leg_height, 
+        base_leg_width, 
+        base_leg_height, 
         base_leg_depth
     );
 
-    (upper_leg_data, middle_leg_data, bottom_leg_data)
+    vec![upper_leg_data, middle_leg_data, bottom_leg_data]
 }

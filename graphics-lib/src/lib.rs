@@ -2,7 +2,7 @@ use std::panic;
 use console_error_panic_hook;
 use js_sys::WebAssembly;
 use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::{WebGlRenderingContext, HtmlCanvasElement, WebGlUniformLocation, HtmlImageElement};
+use web_sys::{WebGlRenderingContext, HtmlCanvasElement, WebGlUniformLocation, HtmlImageElement, WebGlBuffer};
 use web_sys::WebGlRenderingContext as Gl;
 
 mod modules; // mod modules? not good
@@ -86,215 +86,17 @@ impl GraphicsClient {
         //deltatime = deltatime / 1000.;
         self.gl.clear(Gl::COLOR_BUFFER_BIT);
         resize_canvas_to_display_size(&self.gl, &self.canvas);
-        
-        let positions_buffer = self.gl.create_buffer().unwrap(); // it leaves inside rust? (try to transfer into the function)
-        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&positions_buffer));
-
-        self.gl.vertex_attrib_pointer_with_i32(
-            self.a_positions as u32, 
-            3, 
-            Gl::FLOAT, 
-            false, 
-            0, 
-            0,
-        );
-
-        self.send_positions_to_gpu(&self.spider.frontal_legs[0].upper_leg_data);
-
-        // starts animations - put it all inside the same function?
-        //self.spider.animate_front_legs(0.026); // all transformations here               
-        //self.spider.animate_back_legs(0.026);
-        //self.spider.animate_middle_legs(0.026);
-        
         let aspect = (self.canvas.client_width() / self.canvas.client_height()) as f32;
-        
-        let mut upper_leg_model_matrix = m4::perspective(
-            deg_to_rad(DEFAULT_FIELD_OF_VIEW_IN_RADIANS),
-            aspect,
-            DEFAULT_Z_NEAR,
-            DEFAULT_Z_FAR
-        );
-
-        // initial displacement - take_initial_position()
-        upper_leg_model_matrix = m4::translate_3_d(upper_leg_model_matrix, m4::translation(
-            INITIAL_LEG_DISPLACEMENT_X, 
-            INITIAL_LEG_DISPLACEMENT_Y,
-            INITIAL_LEG_DISPLACEMENT_Z, 
-        ));
-
-        // ui control transformations -> create function inside graphics client using ui control? 
-        let ui_rotation_x = self.ui_control.acc_x_rotation.try_borrow().unwrap();
-        let ui_rotation_y = self.ui_control.acc_y_rotation.try_borrow().unwrap();
-        let ui_translate_z = self.ui_control.acc_z_translation.try_borrow().unwrap();
 
         let ui_rotation_x_body = self.ui_control.acc_x_rotation_body.try_borrow().unwrap();
         let ui_rotation_y_body = self.ui_control.acc_y_rotation_body.try_borrow().unwrap();
         let ui_translate_z_body = self.ui_control.acc_z_translation_body.try_borrow().unwrap();
+        //////////////////////////////////////////////////////////////////////////////////////////
 
-       
-        upper_leg_model_matrix = m4::translate_3_d(upper_leg_model_matrix, m4::translation(
-            0., 
-            0., 
-            *ui_translate_z 
-        ));
-
-        upper_leg_model_matrix = m4::x_rotate_3_d( // is that better to put it inside animate() ?
-            upper_leg_model_matrix,
-            m4::x_rotation(deg_to_rad(*ui_rotation_x).into())
-        );
-
-        upper_leg_model_matrix = m4::y_rotate_3_d( // is that better to put it inside animate() ?
-            upper_leg_model_matrix,
-            m4::y_rotation(deg_to_rad(*ui_rotation_y).into())
-        );    
+        // NEW CODE
+        /////////////////////////////////////////////////////////////////
         
-        ///////////////////////////////////////////////////////////////////////////////////////////
-        
-        let middle_leg_model_matrix = m4::translate_3_d(
-            upper_leg_model_matrix, 
-            m4::translation(
-            FRONTAL_MIDDLE_LEG_WIDTH * -1., // adjust distance by width 
-            FRONTAL_UPPER_LEG_BIG_HEIGHT / 2. - FRONTAL_MIDDLE_LEG_BIG_HEIGHT / 2., // same y
-            LEG_DEPTH / 2. - MIDDLE_LEG_DEPTH / 2. // adjust depth (1.5) - do not need to have same depth because only upper is rotating by its center
-            )
-        );
-       
-        // upper_leg_model_matrix = m4::z_rotate_3_d( // is that better to put it inside animate() ?
-        //     upper_leg_model_matrix,
-        //     m4::z_rotation(deg_to_rad(self.spider.z_acc_rotation).into())
-        // );
-       
-        // upper_leg_model_matrix = m4::translate_3_d(upper_leg_model_matrix, m4::translation(
-        //     FRONTAL_UPPER_LEG_WIDTH * -1., 
-        //     (FRONTAL_UPPER_LEG_SMALL_HEIGHT / 2.) * -1., 
-        //     (LEG_DEPTH / 2.) * -1.
-        // ));
-
-        // middle_leg_model_matrix = m4::z_rotate_3_d( // is that better to put it inside animate() ?
-        //     middle_leg_model_matrix,
-        //     m4::z_rotation(deg_to_rad(self.spider.z_acc_rotation * -1.).into())
-        // );
-
-        // middle_leg_model_matrix = m4::translate_3_d(middle_leg_model_matrix, m4::translation(
-        //     FRONTAL_MIDDLE_LEG_WIDTH * -1.,
-        //     (FRONTAL_MIDDLE_LEG_SMALL_HEIGHT / 2.) * -1.,
-        //     0.
-        // ));
-        
-        let mut bottom_leg_model_matrix = m4::z_rotate_3_d(middle_leg_model_matrix, m4::z_rotation(deg_to_rad(180.).into()));    
-        bottom_leg_model_matrix = m4::translate_3_d(
-            bottom_leg_model_matrix, 
-            m4::translation(
-            0.,
-            ((FRONTAL_MIDDLE_LEG_BIG_HEIGHT / 2.) + (FRONTAL_BOTTOM_LEG_HEIGHT / 2.)) * -1.,
-            (MIDDLE_LEG_DEPTH / 2.) - (BASE_LEG_DEPTH / 2.), // thats the diff between the 2 centers 
-            )
-        );
-        // bottom_leg_model_matrix = m4::translate_3_d(
-        //     bottom_leg_model_matrix,
-        //     m4::translation(
-        //         FRONTAL_BOTTOM_LEG_WIDTH, 
-        //         0., 
-        //         0.
-        //     )
-        // );
-        // bottom_leg_model_matrix = m4::translate_3_d(
-        //     bottom_leg_model_matrix,
-        //     m4::translation(
-        //         0., 
-        //         - FRONTAL_MIDDLE_LEG_BIG_HEIGHT / 2., 
-        //         0.
-        //     )
-        // );
-
-
-        self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, &upper_leg_model_matrix);
-
-        let colors_buffer = self.gl.create_buffer().unwrap(); // it leaves inside rust? (try to transfer into the function)
-        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&colors_buffer));
-        
-        self.gl.vertex_attrib_pointer_with_i32(
-            self.a_color as u32, 
-            3, 
-            Gl::UNSIGNED_BYTE, 
-            true, 
-            0, 
-            0,
-        );
-
-        self.send_colors_to_gpu(&self.spider.colors);
-        
-        self.consume_data(self.spider.frontal_legs[0].upper_leg_data.len() as i32 / 3, Gl::TRIANGLES);
-
-        self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, &middle_leg_model_matrix);
-
-        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&positions_buffer));
-
-        self.gl.vertex_attrib_pointer_with_i32(
-            self.a_positions as u32, 
-            3, 
-            Gl::FLOAT, 
-            false, 
-            0, 
-            0,
-        );
-        self.send_positions_to_gpu(&self.spider.frontal_legs[0].middle_leg_data);
-
-        self.consume_data(self.spider.frontal_legs[0].middle_leg_data.len() as i32 / 3, Gl::TRIANGLES);
-        
-        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&positions_buffer));
-
-        self.gl.vertex_attrib_pointer_with_i32(
-            self.a_positions as u32, 
-            3, 
-            Gl::FLOAT, 
-            false, 
-            0, 
-            0,
-        );
-        self.send_positions_to_gpu(&self.spider.frontal_legs[0].bottom_leg_data);
-            
-        self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, &bottom_leg_model_matrix);
-
-        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&colors_buffer));
-        
-        self.gl.vertex_attrib_pointer_with_i32(
-            self.a_color as u32, 
-            3, 
-            Gl::UNSIGNED_BYTE, 
-            true, 
-            0, 
-            0,
-        );
-        self.send_colors_to_gpu(&self.spider.base_leg_colors);
-
-        self.consume_data(self.spider.frontal_legs[0].bottom_leg_data.len() as i32 / 3, Gl::TRIANGLES);
-
-        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&positions_buffer));
-
-        self.gl.vertex_attrib_pointer_with_i32(
-            self.a_positions as u32, 
-            3, 
-            Gl::FLOAT, 
-            false, 
-            0, 
-            0,
-        );
-
-        self.send_positions_to_gpu(&self.spider.body_data);
-
-        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&colors_buffer));
-        
-        self.gl.vertex_attrib_pointer_with_i32(
-            self.a_color as u32, 
-            3, 
-            Gl::UNSIGNED_BYTE, 
-            true, 
-            0, 
-            0,
-        );
-        self.send_colors_to_gpu(&self.spider.body_colors);
-
+        // creating the model matrix for the body
         let mut body_model_matrix = m4::perspective(
             deg_to_rad(DEFAULT_FIELD_OF_VIEW_IN_RADIANS),
             aspect,
@@ -308,6 +110,7 @@ impl GraphicsClient {
             INITIAL_BODY_DISPLACEMENT_Z, 
         ));
 
+        // transformations coming from ui control - 3 transformations
         body_model_matrix = m4::translate_3_d(body_model_matrix, m4::translation(
             0., 
             0., 
@@ -323,14 +126,80 @@ impl GraphicsClient {
             body_model_matrix,
             m4::y_rotation(deg_to_rad(*ui_rotation_y_body).into())
         );    
-    
-        self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, &body_model_matrix);
 
-        self.consume_data(self.spider.body_data.len() as i32 / 3, Gl::TRIANGLES);
-       
+        // when using rust and webgl together, rust is used for data manipulation and
+        // calculation, while webgl is used for rendering and displaying the data on the
+        // client-side. this buffer is not being persisted on rust's layout memory, but rather
+        // in the graphics card's memory on the client-side
+        let positions_buffer = self.gl.create_buffer().unwrap(); 
+        let colors_buffer = self.gl.create_buffer().unwrap(); 
+        
+        self.send_positions_to_gpu(&self.spider.body_data, &positions_buffer);
+        self.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
+        
+        self.consume_data(
+            self.spider.body_data.len() as i32 / 3, 
+            Gl::TRIANGLES, 
+            &body_model_matrix
+        );
+        // ROUND ONE DONE -> BODY
+
+        // mounting legs model matrices
+        // do i really need another matrix?
+        // MOVING TO THE PIVOT POINT (FIND A PROPER WAY TO DO THAT)
+        for (i, leg) in self.spider.frontal_legs.iter().enumerate() {
+            let pivot_point_model_matrix = leg.set_pivot_point(&body_model_matrix);
+            let initial_transformations_model_matrix = leg.set_initial_transformations(&pivot_point_model_matrix, i);
+            for (j, model_matrix) in initial_transformations_model_matrix.iter().enumerate() {    
+                self.send_positions_to_gpu(&leg.vertex_data[j], &positions_buffer);
+
+                if i == 2 { // only for base leg 
+                    self.send_colors_to_gpu(&self.spider.base_leg_colors, &colors_buffer);
+                } else {
+                    self.send_colors_to_gpu(&self.spider.colors, &colors_buffer);
+                }
+                
+                self.consume_data(
+                    leg.vertex_data[i].len() as i32 / 3, 
+                    Gl::TRIANGLES, 
+                    model_matrix
+                );
+            }            
+        }
+
+        for (i, leg) in self.spider.back_legs.iter().enumerate() {
+            let pivot_point_model_matrix = leg.set_pivot_point(&body_model_matrix);
+            let initial_transformations_model_matrix = leg.set_initial_transformations(&pivot_point_model_matrix, i);
+            for (j, model_matrix) in initial_transformations_model_matrix.iter().enumerate() {    
+                self.send_positions_to_gpu(&leg.vertex_data[j], &positions_buffer);
+
+                if i == 2 { // only for base leg 
+                    self.send_colors_to_gpu(&self.spider.base_leg_colors, &colors_buffer);
+                } else {
+                    self.send_colors_to_gpu(&self.spider.colors, &colors_buffer);
+                }
+                
+                self.consume_data(
+                    leg.vertex_data[i].len() as i32 / 3, 
+                    Gl::TRIANGLES, 
+                    model_matrix
+                );
+            }            
+        }
     }
 
-    fn send_positions_to_gpu(&self, positions: &[f32]) {
+    fn send_positions_to_gpu(&self, positions: &[f32], positions_buffer: &WebGlBuffer) {
+        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(positions_buffer));
+
+        self.gl.vertex_attrib_pointer_with_i32(
+            self.a_positions as u32, 
+            3, 
+            Gl::FLOAT, 
+            false, 
+            0, 
+            0,
+        );
+
         let memory_buffer_view = wasm_bindgen::memory() // persist this memory buffer?
         .dyn_into::<WebAssembly::Memory>()
         .unwrap()
@@ -343,7 +212,18 @@ impl GraphicsClient {
         self.gl.enable_vertex_attrib_array(self.a_color as u32);
     }
 
-    fn send_colors_to_gpu(&self, colors: &[u8]) {
+    fn send_colors_to_gpu(&self, colors: &[u8], colors_buffer: &WebGlBuffer) {
+        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(colors_buffer));
+        
+        self.gl.vertex_attrib_pointer_with_i32(
+            self.a_color as u32, 
+            3, 
+            Gl::UNSIGNED_BYTE, 
+            true, 
+            0, 
+            0,
+        );
+
         let memory_buffer_view = wasm_bindgen::memory() // persist this memory buffer?
         .dyn_into::<WebAssembly::Memory>()
         .unwrap()
@@ -356,7 +236,9 @@ impl GraphicsClient {
         self.gl.enable_vertex_attrib_array(self.a_positions as u32);
     }
     
-    fn consume_data(&self, vert_count: i32, mode: u32) {
+    fn consume_data(&self, vert_count: i32, mode: u32, model_matrix: &[f32; 16]) {
+        self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, model_matrix);
+        
         self.gl.draw_arrays(mode, 0, vert_count);
     }
 }

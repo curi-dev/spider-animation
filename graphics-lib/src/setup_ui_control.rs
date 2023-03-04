@@ -13,7 +13,8 @@ pub struct SetupUiControl{
     pub acc_z_translation_body: Rc<RefCell<f32>>, 
     pub acc_x_rotation_body: Rc<RefCell<f32>>, 
     pub acc_y_rotation_body: Rc<RefCell<f32>>,
-    pub active_object: Rc<RefCell<u8>>
+    //pub active_object: Rc<RefCell<u8>>
+    pub active_object: u8
 }
 
 impl SetupUiControl {
@@ -45,124 +46,124 @@ impl SetupUiControl {
             let key_code = event.key_code();         
             log(&format!("[KEY_CODE] {}", key_code));
             
-            let mut active_object_handler = active_object.borrow_mut();
-            log(&format!("[OBJECT] active_object: {} ", *active_object_handler));
+            //let mut active_object_handler = active_object.borrow_mut();
+            //log(&format!("[OBJECT] active_object: {} ", *active_object_handler));
             
             if key_code == 38 {
-                if *active_object_handler == 0 {
-                    let x_rotation_angle = *x_rotation.borrow_mut();
+                // if *active_object_handler == 0 {
+                //     let x_rotation_angle = *x_rotation.borrow_mut();
     
-                    log(&format!("[MORE] y_rotation_angle: {} ", x_rotation_angle));
+                //     log(&format!("[MORE] y_rotation_angle: {} ", x_rotation_angle));
     
-                    *x_rotation.borrow_mut() = x_rotation_angle + 3.5;
-                } else {
+                //     *x_rotation.borrow_mut() = x_rotation_angle + 3.5;
+                // } else {
                     let x_rotation_angle = *x_rotation_body.borrow_mut();
     
                     log(&format!("[MORE] y_rotation_angle: {} ", x_rotation_angle));
     
                     *x_rotation_body.borrow_mut() = x_rotation_angle + 3.5;
-                }             
+                //}             
             }
 
     
             if key_code == 40 {
-                if *active_object_handler == 0 {
-                    let x_rotation_angle = *x_rotation.borrow_mut();
+                // if *active_object_handler == 0 {
+                //     let x_rotation_angle = *x_rotation.borrow_mut();
     
-                    log(&format!("[MORE] x_rotation_angle: {} ", x_rotation_angle));
+                //     log(&format!("[MORE] x_rotation_angle: {} ", x_rotation_angle));
         
-                    *x_rotation.borrow_mut() = x_rotation_angle - 3.5;
-                } else {
+                //     *x_rotation.borrow_mut() = x_rotation_angle - 3.5;
+                // } else {
                     let x_rotation_angle = *x_rotation_body.borrow_mut();
     
                     log(&format!("[MORE] x_rotation_angle: {} ", x_rotation_angle));
         
                     *x_rotation_body.borrow_mut() = x_rotation_angle - 3.5;
-                }
+                //}
                 
             }
 
 
             if key_code == 39 {  
-                log(&format!("[OBJECT] active_object: {} ", *active_object_handler));
+                //log(&format!("[OBJECT] active_object: {} ", *active_object_handler));
                 
-                if *active_object_handler == 0 {
-                    let y_rotation_angle = *y_rotation.borrow_mut();
+                // if *active_object_handler == 0 {
+                //     let y_rotation_angle = *y_rotation.borrow_mut();
     
-                    log(&format!("[MORE] y_rotation_angle: {} ", y_rotation_angle));
+                //     log(&format!("[MORE] y_rotation_angle: {} ", y_rotation_angle));
         
-                    *y_rotation.borrow_mut() = y_rotation_angle + 3.5;
-                } else {
+                //     *y_rotation.borrow_mut() = y_rotation_angle + 3.5;
+                // } else {
                     let y_rotation_angle = *y_rotation_body.borrow_mut();
     
                     log(&format!("[MORE] y_rotation_angle: {} ", y_rotation_angle));
     
                     *y_rotation_body.borrow_mut() = y_rotation_angle + 3.5;
-                }
+                //}
             }
 
     
             if key_code == 37 {                 
-                if *active_object_handler == 0 {
-                    let y_rotation_angle = *y_rotation.borrow_mut();
+                // if *active_object_handler == 0 {
+                //     let y_rotation_angle = *y_rotation.borrow_mut();
     
-                    log(&format!("[MINUS] y_rotation_angle: {} ", y_rotation_angle));
+                //     log(&format!("[MINUS] y_rotation_angle: {} ", y_rotation_angle));
                     
-                    *y_rotation.borrow_mut() = y_rotation_angle - 3.5;
-                } else {
+                //     *y_rotation.borrow_mut() = y_rotation_angle - 3.5;
+                // } else {
                     let y_rotation_angle = *y_rotation_body.borrow_mut();
     
                     log(&format!("[MINUS] y_rotation_angle: {} ", y_rotation_angle));
                 
                     *y_rotation_body.borrow_mut() = y_rotation_angle - 3.5;
-                }                
+                //}                
             }
 
 
             if key_code == 65 {
-                if *active_object_handler == 0 {
-                    let z_translation_inner = *z_translation.borrow_mut();
+                // if *active_object_handler == 0 {
+                //     let z_translation_inner = *z_translation.borrow_mut();
                 
-                    log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
+                //     log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
         
-                    *z_translation.borrow_mut() = z_translation_inner + 5.;
-                } else {
+                //     *z_translation.borrow_mut() = z_translation_inner + 5.;
+                // } else {
                     let z_translation_inner = *z_translation_body.borrow_mut();
                 
                     log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
         
                     *z_translation_body.borrow_mut() = z_translation_inner + 5.;
-                }
+                //}
             }
 
 
             if key_code == 32 {
-                if *active_object_handler == 0 {
-                    let z_translation_inner = *z_translation.borrow_mut();
+                // if *active_object_handler == 0 {
+                //     let z_translation_inner = *z_translation.borrow_mut();
                 
-                    log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
+                //     log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
     
-                    *z_translation.borrow_mut() = z_translation_inner - 5.;
-                } else {
+                //     *z_translation.borrow_mut() = z_translation_inner - 5.;
+                // } else {
                     let z_translation_inner = *z_translation_body.borrow_mut();
                 
                     log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
     
                     *z_translation_body.borrow_mut() = z_translation_inner - 5.;
-                }               
+                //}               
             }
 
 
             if key_code == 13 {  
                 //let mut active_object_handler = active_object.borrow_mut();
                 
-                log(&format!("[OBJECT] active_object: {} ", *active_object_handler));
+                //log(&format!("[OBJECT] active_object: {} ", *active_object_handler));
                 
-                if *active_object_handler == 0 {
-                    *active_object_handler = 1;
-                } else {
-                    *active_object_handler = 0;
-                }
+                // if *active_object_handler == 0 {
+                //     *active_object_handler = 1;
+                // } else {
+                //     *active_object_handler = 0;
+                // }
             }
         }) as Box<dyn FnMut(_)>);
     
@@ -175,7 +176,7 @@ impl SetupUiControl {
             acc_z_translation: z_translation_clone,
             acc_x_rotation: x_rotation_clone,
             acc_y_rotation: y_rotation_clone,
-            active_object: active_object_clone,
+            active_object: 1,
             acc_z_translation_body: z_translation_body_clone,
             acc_x_rotation_body: x_rotation_body_clone,
             acc_y_rotation_body: y_rotation_body_clone,
