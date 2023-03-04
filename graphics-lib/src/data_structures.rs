@@ -209,20 +209,20 @@ pub fn get_body_colors() -> [u8; 270] {
         95, 215, 150,
 
         // convergent 1 to between A
-        160, 160, 220,
-        160, 160, 220,
-        160, 160, 220,
-        160, 160, 220,
-        160, 160, 220,
-        160, 160, 220,
+        60, 60, 220,
+        60, 60, 220,
+        60, 60, 220,
+        60, 60, 220,
+        60, 60, 220,
+        60, 60, 220,
 
         // convergent 2 to between A
-        110, 60, 180,
-        110, 60, 180,
-        110, 60, 180,
-        110, 60, 180,
-        110, 60, 180,
-        110, 60, 180,
+        110, 160, 180,
+        110, 160, 180,
+        110, 160, 180,
+        110, 160, 180,
+        110, 160, 180,
+        110, 160, 180,
 
         // between A
         26, 110, 210,
@@ -463,7 +463,7 @@ pub fn get_body_data() -> [f32; 270] {
         0., 0., BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
         -BODY_BACK_WIDTH_OFFSET, 0., BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
         
-        0., 0., BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
+        0., 0., BODY_DEPTH - BODY_BACK_DEPTH_OFFSET,
         0., 0., BODY_DEPTH,
         -BODY_BACK_WIDTH_OFFSET, 0., BODY_DEPTH -  BODY_BACK_DEPTH_OFFSET,
     ];
@@ -519,20 +519,20 @@ pub fn get_leg_data(leg_position: &LegType) -> Vec<Vec<f32>> {
             base_leg_depth = BACK_BASE_LEG_DEPTH;
         },
         LegType::Middle => {
-            upper_leg_width = FRONTAL_UPPER_LEG_WIDTH;
-            upper_leg_big_height = FRONTAL_UPPER_LEG_BIG_HEIGHT;
-            upper_leg_small_height = FRONTAL_UPPER_LEG_SMALL_HEIGHT;
+            upper_leg_width = MIDDLE_UPPER_LEG_WIDTH;
+            upper_leg_big_height = MIDDLE_UPPER_LEG_BIG_HEIGHT;
+            upper_leg_small_height = MIDDLE_UPPER_LEG_SMALL_HEIGHT;
             
-            joint_leg_width = FRONTAL_JOINT_LEG_WIDTH;
-            joint_leg_big_height = FRONTAL_JOINT_LEG_BIG_HEIGHT;
-            joint_leg_small_height = FRONTAL_JOINT_LEG_SMALL_HEIGHT;
+            joint_leg_width = MIDDLE_JOINT_LEG_WIDTH;
+            joint_leg_big_height = MIDDLE_JOINT_LEG_BIG_HEIGHT;
+            joint_leg_small_height = MIDDLE_JOINT_LEG_SMALL_HEIGHT;
             
-            base_leg_width = FRONTAL_BOTTOM_LEG_WIDTH;
-            base_leg_height = FRONTAL_BOTTOM_LEG_HEIGHT;
+            base_leg_width = MIDDLE_BASE_LEG_WIDTH;
+            base_leg_height = MIDDLE_BASE_LEG_HEIGHT;
             
-            upper_leg_depth = FRONTAL_UPPER_LEG_DEPTH;
-            joint_leg_depth = FRONTAL_JOINT_LEG_DEPTH;
-            base_leg_depth = FRONTAL_BASE_LEG_DEPTH;
+            upper_leg_depth = MIDDLE_UPPER_LEG_DEPTH;
+            joint_leg_depth = MIDDLE_JOINT_LEG_DEPTH;
+            base_leg_depth = MIDDLE_BASE_LEG_DEPTH;
         }       
     }
 

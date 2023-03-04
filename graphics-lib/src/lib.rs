@@ -144,13 +144,12 @@ impl GraphicsClient {
         );
         // ROUND ONE DONE -> BODY
 
-        // mounting legs model matrices
-        // do i really need another matrix?
-        // MOVING TO THE PIVOT POINT (FIND A PROPER WAY TO DO THAT)
         for (i, leg) in self.spider.frontal_legs.iter().enumerate() {
+            let positions_buffer = self.gl.create_buffer().unwrap(); 
+            let colors_buffer = self.gl.create_buffer().unwrap(); 
             let pivot_point_model_matrix = leg.set_pivot_point(&body_model_matrix);
             let initial_transformations_model_matrix = leg.set_initial_transformations(&pivot_point_model_matrix, i);
-            for (j, model_matrix) in initial_transformations_model_matrix.iter().enumerate() {    
+            for (j, model_matrix) in initial_transformations_model_matrix.iter().enumerate() {                
                 self.send_positions_to_gpu(&leg.vertex_data[j], &positions_buffer);
 
                 if i == 2 { // only for base leg 
@@ -160,7 +159,7 @@ impl GraphicsClient {
                 }
                 
                 self.consume_data(
-                    leg.vertex_data[i].len() as i32 / 3, 
+                    leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
                     model_matrix
                 );
@@ -168,6 +167,8 @@ impl GraphicsClient {
         }
 
         for (i, leg) in self.spider.back_legs.iter().enumerate() {
+            let positions_buffer = self.gl.create_buffer().unwrap(); 
+            let colors_buffer = self.gl.create_buffer().unwrap(); 
             let pivot_point_model_matrix = leg.set_pivot_point(&body_model_matrix);
             let initial_transformations_model_matrix = leg.set_initial_transformations(&pivot_point_model_matrix, i);
             for (j, model_matrix) in initial_transformations_model_matrix.iter().enumerate() {    
@@ -180,7 +181,29 @@ impl GraphicsClient {
                 }
                 
                 self.consume_data(
-                    leg.vertex_data[i].len() as i32 / 3, 
+                    leg.vertex_data[j].len() as i32 / 3, 
+                    Gl::TRIANGLES, 
+                    model_matrix
+                );
+            }            
+        }
+
+        for (i, leg) in self.spider.middle_legs.iter().enumerate() {
+            let positions_buffer = self.gl.create_buffer().unwrap(); 
+            let colors_buffer = self.gl.create_buffer().unwrap(); 
+            let pivot_point_model_matrix = leg.set_pivot_point(&body_model_matrix);
+            let initial_transformations_model_matrix = leg.set_initial_transformations(&pivot_point_model_matrix, i);
+            for (j, model_matrix) in initial_transformations_model_matrix.iter().enumerate() {    
+                self.send_positions_to_gpu(&leg.vertex_data[j], &positions_buffer);
+
+                if i == 2 { // only for base leg 
+                    self.send_colors_to_gpu(&self.spider.base_leg_colors, &colors_buffer);
+                } else {
+                    self.send_colors_to_gpu(&self.spider.colors, &colors_buffer);
+                }
+                
+                self.consume_data(
+                    leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
                     model_matrix
                 );
