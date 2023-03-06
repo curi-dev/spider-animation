@@ -95,8 +95,8 @@ impl Leg {
             upper_leg_height,
             upper_leg_depth 
         );
- 
-        let upper_leg_model_matrix = m4::translate_3_d( // is that better to put it inside animate() ?
+
+        let upper_leg_model_matrix = m4::translate_3_d( 
             *pre_matrix, // what happens with dereferencing a vector
             m4::translation( 
                 self.body_clamp_point.0 - pivot.0, 
@@ -104,7 +104,7 @@ impl Leg {
                 self.body_clamp_point.2 - pivot.2, 
             )
         );
-
+        
         upper_leg_model_matrix
     }
 
@@ -334,7 +334,7 @@ impl Leg {
                         m4::translation( 
                             - MIDDLE_UPPER_LEG_WIDTH, 
                             MIDDLE_UPPER_LEG_BIG_HEIGHT - MIDDLE_UPPER_LEG_SMALL_HEIGHT,
-                            - MIDDLE_UPPER_LEG_DEPTH / 2.
+                            ( MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.
                         )
                     );
     
@@ -354,8 +354,23 @@ impl Leg {
     
                     upper_leg_model_matrix = m4::z_rotate_3_d(
                         upper_leg_model_matrix, 
-                        m4::z_rotation( deg_to_rad(45.).into() ) // 180 invert + 55 up
+                        m4::z_rotation( deg_to_rad(55.).into() ) // 180 invert + 55 up
                     );
+
+                    // rotate the end legs in 15 degrees 
+                    if leg_i == 0 {
+                        upper_leg_model_matrix = m4::y_rotate_3_d(
+                            upper_leg_model_matrix, 
+                            m4::y_rotation( deg_to_rad( -7. ).into() ) // 180 invert + 55 up
+                        );
+                    }
+
+                    if leg_i == 2 {
+                        upper_leg_model_matrix = m4::y_rotate_3_d(
+                            upper_leg_model_matrix, 
+                            m4::y_rotation( deg_to_rad( 7. ).into() ) // 180 invert + 55 up
+                        );
+                    }
             
                     upper_leg_model_matrix = m4::translate_3_d( 
                         upper_leg_model_matrix, 
@@ -366,13 +381,13 @@ impl Leg {
                         )
                     );
                 } else {
-                    println!("other side legs");
+                    // other side legs
                     upper_leg_model_matrix = m4::translate_3_d( 
                         upper_leg_model_matrix, 
                         m4::translation( 
                             MIDDLE_UPPER_LEG_WIDTH,
-                            (MIDDLE_UPPER_LEG_BIG_HEIGHT - MIDDLE_UPPER_LEG_SMALL_HEIGHT) * -1.,
-                            (MIDDLE_UPPER_LEG_DEPTH / 2.) + BODY_DEPTH,
+                            0.,
+                            MIDDLE_UPPER_LEG_DEPTH / 2.
                         )
                     );
 
@@ -385,36 +400,69 @@ impl Leg {
                         upper_leg_model_matrix, 
                         m4::translation( 
                             - MIDDLE_UPPER_LEG_WIDTH, 
-                            MIDDLE_UPPER_LEG_BIG_HEIGHT - MIDDLE_UPPER_LEG_SMALL_HEIGHT,
-                            (MIDDLE_UPPER_LEG_DEPTH / 2.) * -1.
-                        )
-                    );
-
-                    upper_leg_model_matrix = m4::translate_3_d( 
-                        upper_leg_model_matrix, 
-                        m4::translation( 
-                            - MIDDLE_UPPER_LEG_WIDTH,
                             0.,
-                            (MIDDLE_UPPER_LEG_DEPTH / 2.) * -1.,
+                             (MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.,
                         )
                     );
 
-                    upper_leg_model_matrix = m4::x_rotate_3_d(
-                        upper_leg_model_matrix, 
-                        m4::x_rotation( deg_to_rad(180.).into() ) // 180 invert + 55 up
-                    );
-    
-                    upper_leg_model_matrix = m4::z_rotate_3_d(
-                        upper_leg_model_matrix, 
-                        m4::z_rotation( deg_to_rad(45.).into() ) // 180 invert + 55 up
-                    );
-            
                     upper_leg_model_matrix = m4::translate_3_d( 
                         upper_leg_model_matrix, 
                         m4::translation( 
                             - MIDDLE_UPPER_LEG_WIDTH,
                             0.,
                             MIDDLE_UPPER_LEG_DEPTH / 2.,
+                        )
+                    );
+
+                    upper_leg_model_matrix = m4::x_rotate_3_d(
+                        upper_leg_model_matrix, 
+                        m4::x_rotation( deg_to_rad( -180. ).into() ) // 180 invert + 55 up
+                    );
+                    
+                    upper_leg_model_matrix = m4::translate_3_d( 
+                        upper_leg_model_matrix, 
+                        m4::translation( 
+                            MIDDLE_UPPER_LEG_WIDTH,
+                            0.,
+                            ( MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.,
+                        )
+                    );
+
+                    upper_leg_model_matrix = m4::translate_3_d( 
+                        upper_leg_model_matrix, 
+                        m4::translation( 
+                            MIDDLE_UPPER_LEG_WIDTH,
+                            0.,
+                            MIDDLE_UPPER_LEG_DEPTH / 2.,
+                        )
+                    );
+
+                    upper_leg_model_matrix = m4::z_rotate_3_d(
+                        upper_leg_model_matrix, 
+                        m4::z_rotation( deg_to_rad( 55.).into() ) 
+                    );
+
+                    // rotate the end legs in 15 degrees 
+                    if leg_i == 3 {
+                        upper_leg_model_matrix = m4::y_rotate_3_d(
+                            upper_leg_model_matrix, 
+                            m4::y_rotation( deg_to_rad( 7. ).into() ) // 180 invert + 55 up
+                        );
+                    }
+
+                    if leg_i == 5 {
+                        upper_leg_model_matrix = m4::y_rotate_3_d(
+                            upper_leg_model_matrix, 
+                            m4::y_rotation( deg_to_rad( -7. ).into() ) // 180 invert + 55 up
+                        );
+                    }
+
+                    upper_leg_model_matrix = m4::translate_3_d( 
+                        upper_leg_model_matrix, 
+                        m4::translation( 
+                            - MIDDLE_UPPER_LEG_WIDTH,
+                            0.,
+                            ( MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.,
                         )
                     );
                 }
@@ -452,7 +500,7 @@ impl Leg {
                     )
                 );
 
-            },
+            }
         }
         
     
@@ -465,14 +513,14 @@ pub struct Spider {
     pub colors: [u8; 108],
     pub base_leg_colors: [u8; 54],
     pub body_colors: [u8; 270],
-    pub body_data: [f32; 270], // separate body
+    pub body_data: [f32; 270], 
     pub speed: f32,
     pub body_x_acc_rotation: f32,
     pub body_y_acc_rotation: f32,
-    pub body_z_acc_rotation: f32, // for front legs
-    pub frontal_legs: [Leg; 2], // there is a way to limitate this structure for only frontal legs?
+    pub body_z_acc_rotation: f32, 
+    pub frontal_legs: [Leg; 2], 
     pub back_legs: [Leg; 2],
-    pub middle_legs: [Leg; 4]
+    pub middle_legs: [Leg; 6],
 }
 
 impl Spider {
@@ -522,7 +570,7 @@ impl Spider {
                 LegType::Middle, 
                 (  
                     BODY_WIDTH / 3. / 2.,
-                    BODY_HEIGHT / 2.65,
+                    BODY_HEIGHT / 2.45,
                     FRONTAL_UPPER_LEG_DEPTH
                 )
             ),
@@ -530,7 +578,7 @@ impl Spider {
                 LegType::Middle, 
                 (  
                     (BODY_WIDTH / 3. * 2.) - BODY_WIDTH / 3. / 2.,
-                    BODY_HEIGHT / 2.65,
+                    BODY_HEIGHT / 2.125,
                     FRONTAL_UPPER_LEG_DEPTH
                 )
             ),
@@ -538,7 +586,7 @@ impl Spider {
                 LegType::Middle, 
                 (  
                     (BODY_WIDTH / 3. * 3.) - BODY_WIDTH / 3. / 2.,
-                    BODY_HEIGHT / 2.65,
+                    BODY_HEIGHT / 2.45,
                     FRONTAL_UPPER_LEG_DEPTH
                 )
             ),
@@ -547,37 +595,33 @@ impl Spider {
             Leg::new(
                 LegType::Middle, 
                 (  
-                    // BODY_WIDTH / 3. / 2.,
-                    // BODY_HEIGHT / 2.65,
-                    // - FRONTAL_UPPER_LEG_DEPTH
-                    0.,
-                    0.,
-                    0.
+                    BODY_WIDTH / 3. / 2.,
+                    BODY_HEIGHT / 2.45,
+                    BODY_DEPTH,
                 )
             ),
-            // Leg::new(
-            //     LegType::Middle, 
-            //     (  
-            //         (BODY_WIDTH / 3. * 2.) - BODY_WIDTH / 3. / 2.,
-            //         BODY_HEIGHT / 2.65,
-            //         - FRONTAL_UPPER_LEG_DEPTH
-            //     )
-            // ),
-            // Leg::new(
-            //     LegType::Middle, 
-            //     (  
-            //         (BODY_WIDTH / 3. * 3.) - BODY_WIDTH / 3. / 2.,
-            //         BODY_HEIGHT / 2.65,
-            //         - FRONTAL_UPPER_LEG_DEPTH
-            //     )
-            // ),
+            Leg::new(
+                LegType::Middle, 
+                (  
+                    (BODY_WIDTH / 3. * 2.) - BODY_WIDTH / 3. / 2.,
+                    BODY_HEIGHT / 2.125,
+                    BODY_DEPTH
+                )
+            ),
+            Leg::new(
+                LegType::Middle, 
+                (  
+                    (BODY_WIDTH / 3. * 3.) - BODY_WIDTH / 3. / 2.,
+                    BODY_HEIGHT / 2.45,
+                    BODY_DEPTH
+                )
+            ),
         ];
-
 
         Self { 
             frontal_legs,
             middle_legs,
-            back_legs,        
+            back_legs,       
             speed: 10., 
             body_z_acc_rotation: 0.,
             body_x_acc_rotation: 0.,

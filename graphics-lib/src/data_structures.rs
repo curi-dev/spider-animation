@@ -533,7 +533,7 @@ pub fn get_leg_data(leg_position: &LegType) -> Vec<Vec<f32>> {
             upper_leg_depth = MIDDLE_UPPER_LEG_DEPTH;
             joint_leg_depth = MIDDLE_JOINT_LEG_DEPTH;
             base_leg_depth = MIDDLE_BASE_LEG_DEPTH;
-        }       
+        }
     }
 
     let upper_leg_data = get_upper_or_middle_leg_data(
