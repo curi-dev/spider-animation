@@ -471,6 +471,153 @@ pub fn get_body_data() -> [f32; 270] {
     body_data
 }
 
+pub fn get_head_data() -> [f32; 270] {
+    let body_data = [
+        // side one
+        0., 0., 0.,
+        0., HEAD_HEIGHT, 0., // height
+        HEAD_WIDTH, 0., 0., // width
+        
+        HEAD_WIDTH, 0., 0., // width
+        0., HEAD_HEIGHT, 0., // height
+        HEAD_WIDTH, HEAD_HEIGHT, 0., // width, height
+
+        // side two
+        0., 0., HEAD_DEPTH, // depth
+        HEAD_WIDTH, 0., HEAD_DEPTH, // width, depth
+        0., HEAD_HEIGHT, HEAD_DEPTH, // height, depth
+        
+        HEAD_WIDTH, 0., HEAD_DEPTH, // width, depth
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH, // width, height, depth
+        0., HEAD_HEIGHT, HEAD_DEPTH, // height, depth
+
+        // convergent 1 to between A
+        HEAD_WIDTH, 0., 0., // width
+        HEAD_WIDTH, HEAD_HEIGHT, 0., // width, height
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH / 3., // width advance convergent (width + 10), height, depth / 2
+        
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH / 3., // width advance convergent, height, depth / 2
+        HEAD_WIDTH, HEAD_HEIGHT, 0.,
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH / 3.,
+
+        // convergent 2 to between A
+        HEAD_WIDTH, 0., HEAD_DEPTH, // width
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH - (HEAD_DEPTH / 3.), // width advance convergent (width + 10), height, depth / 2
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH, // width, height
+        
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH - (HEAD_DEPTH / 3.), // width advance convergent, height, depth / 2
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH - (HEAD_DEPTH / 3.),
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH,
+
+        // between A
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH / 3.,
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH / 3.,
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH - (HEAD_DEPTH / 3.),
+
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH - (HEAD_DEPTH / 3.),
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH / 3.,
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH - (HEAD_DEPTH / 3.),
+        
+        // upside (red)
+        0., 0., 0.,
+        HEAD_WIDTH, 0., 0.,
+        0., 0., HEAD_DEPTH,
+
+        0., 0., HEAD_DEPTH,
+        HEAD_WIDTH, 0., 0.,
+        HEAD_WIDTH, 0., HEAD_DEPTH,
+
+        // downside (blue)
+        0., HEAD_HEIGHT, HEAD_DEPTH,
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH,
+        0., HEAD_HEIGHT, 0.,
+
+        0., HEAD_HEIGHT, 0.,
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH,
+        HEAD_WIDTH, HEAD_HEIGHT, 0.,
+
+        // CLOSE BETWEEN UP
+
+        // triangle one up side close
+        HEAD_WIDTH, HEAD_HEIGHT, 0.,
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH / 3., 
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH / 3.,
+
+        // triangle two up side close
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH,
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH - HEAD_DEPTH / 3.,
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH - HEAD_DEPTH / 3., 
+
+        // close between one & two
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH / 3., 
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH - HEAD_DEPTH / 3.,
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH / 3.,
+        
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH / 3.,
+        HEAD_WIDTH, HEAD_HEIGHT, HEAD_DEPTH - HEAD_DEPTH / 3.,
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH - HEAD_DEPTH / 3.,
+
+        // CLOSE BETWEEN DOWN
+
+        // triangle one down side close
+        HEAD_WIDTH, 0., 0.,
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH / 3.,
+        HEAD_WIDTH, 0., HEAD_DEPTH / 3., 
+
+        // triangle two down side close
+        HEAD_WIDTH, 0., HEAD_DEPTH,
+        HEAD_WIDTH, 0., HEAD_DEPTH - HEAD_DEPTH / 3., 
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH - HEAD_DEPTH / 3.,
+
+        // close between one & two
+        HEAD_WIDTH, 0., HEAD_DEPTH / 3., 
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH / 3.,       
+        HEAD_WIDTH, 0., HEAD_DEPTH - HEAD_DEPTH / 3.,
+      
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH / 3.,
+        HEAD_WIDTH + HEAD_FRONTAL_WIDTH_OFFSET, 0., HEAD_DEPTH - HEAD_DEPTH / 3.,
+        HEAD_WIDTH, 0., HEAD_DEPTH - HEAD_DEPTH / 3.,
+
+        // tail convergent one
+        0., 0., HEAD_DEPTH,
+        -HEAD_BACK_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH - HEAD_BACK_DEPTH_OFFSET,
+        -HEAD_BACK_WIDTH_OFFSET, 0., HEAD_DEPTH - HEAD_BACK_DEPTH_OFFSET,
+        
+        0., HEAD_HEIGHT, HEAD_DEPTH,
+        -HEAD_BACK_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH - HEAD_BACK_DEPTH_OFFSET,
+        0., 0., HEAD_DEPTH,
+
+        // tail convergent two
+        -HEAD_BACK_WIDTH_OFFSET, 0., HEAD_DEPTH / 2.,
+        -HEAD_BACK_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH / 2.,
+        0., 0., 0.,
+        
+        0., HEAD_HEIGHT, 0.,
+        0., 0., 0.,
+        -HEAD_BACK_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH / 2.,
+        
+        // tail close triangle up
+        0., HEAD_HEIGHT, 0.,
+        -HEAD_BACK_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH -  HEAD_BACK_DEPTH_OFFSET,
+        0., HEAD_HEIGHT, HEAD_DEPTH -  HEAD_BACK_DEPTH_OFFSET,
+        
+        0., HEAD_HEIGHT, HEAD_DEPTH -  HEAD_BACK_DEPTH_OFFSET,
+        -HEAD_BACK_WIDTH_OFFSET, HEAD_HEIGHT, HEAD_DEPTH -  HEAD_BACK_DEPTH_OFFSET,
+        0., HEAD_HEIGHT, HEAD_DEPTH,
+
+        // tail close triangle down
+        0., 0., 0.,
+        0., 0., HEAD_DEPTH -  HEAD_BACK_DEPTH_OFFSET,
+        -HEAD_BACK_WIDTH_OFFSET, 0., HEAD_DEPTH -  HEAD_BACK_DEPTH_OFFSET,
+        
+        0., 0., HEAD_DEPTH - HEAD_BACK_DEPTH_OFFSET,
+        0., 0., HEAD_DEPTH,
+        -HEAD_BACK_WIDTH_OFFSET, 0., HEAD_DEPTH -  HEAD_BACK_DEPTH_OFFSET,
+    ];
+
+    body_data
+}
+
 pub fn get_leg_data(leg_position: &LegType) -> Vec<Vec<f32>> {
 
     let upper_leg_width: f32;

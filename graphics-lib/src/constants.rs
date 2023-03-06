@@ -57,13 +57,22 @@ pub const INITIAL_BODY_DISPLACEMENT_Y: f32 = 0.;
 pub const INITIAL_BODY_DISPLACEMENT_Z: f32 = -80.;
 
 // BODY SIZES
-pub const BODY_HEIGHT: f32 = 17.;
 pub const BODY_WIDTH: f32 = 20.;
+pub const BODY_HEIGHT: f32 = 17.;
 pub const BODY_DEPTH: f32 = 20.;
 pub const BODY_FRONTAL_WIDTH_OFFSET: f32 = 4.5;
 pub const BODY_FRONTAL_DEPTH_OFFSET: f32 = BODY_DEPTH / 3.; 
 pub const BODY_BACK_DEPTH_OFFSET: f32 = BODY_DEPTH / 2.; 
 pub const BODY_BACK_WIDTH_OFFSET: f32 = 2.5;
+
+// HEAD SIZES
+pub const HEAD_WIDTH: f32 = 3.5;
+pub const HEAD_HEIGHT: f32 = 5.5;
+pub const HEAD_DEPTH: f32 = BODY_DEPTH / 3.;
+pub const HEAD_FRONTAL_WIDTH_OFFSET: f32 = 1.2;
+pub const HEAD_FRONTAL_DEPTH_OFFSET: f32 = HEAD_DEPTH / 3.; 
+pub const HEAD_BACK_DEPTH_OFFSET: f32 = HEAD_DEPTH / 2.; 
+pub const HEAD_BACK_WIDTH_OFFSET: f32 = 2.5;
 
 
 pub fn get_frontal_body_convergent_angle() -> f32 {

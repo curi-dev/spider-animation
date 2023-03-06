@@ -5,7 +5,7 @@ use crate::{
         get_leg_data, 
         get_base_leg_colors, 
         get_body_colors, 
-        get_body_data
+        get_body_data, get_head_data
     }, 
     modules::m4::m4::M4 as m4, 
     webgl_utils::deg_to_rad, 
@@ -513,7 +513,8 @@ pub struct Spider {
     pub colors: [u8; 108],
     pub base_leg_colors: [u8; 54],
     pub body_colors: [u8; 270],
-    pub body_data: [f32; 270], 
+    pub body_data: [f32; 270],
+    pub head_data: [f32; 270], // use body_colors
     pub speed: f32,
     pub body_x_acc_rotation: f32,
     pub body_y_acc_rotation: f32,
@@ -628,6 +629,7 @@ impl Spider {
             body_y_acc_rotation: 0.,
             body_data: get_body_data(), // call it directly on the code
             body_colors: get_body_colors(), // call it directly on the code
+            head_data: get_head_data(),
             colors: get_colors(), // call it directly on the code
             base_leg_colors: get_base_leg_colors(), // call it directly on the code
         }
