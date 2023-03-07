@@ -74,9 +74,12 @@ impl Leg {
         let upper_leg_depth: f32;
         match self.position {
             LegType::Frontal => {
-                upper_leg_width = FRONTAL_UPPER_LEG_WIDTH;
+                upper_leg_width = 0.;
                 upper_leg_height = 0.;
-                upper_leg_depth = FRONTAL_UPPER_LEG_DEPTH / 2.;
+                upper_leg_depth = 0.;
+                // upper_leg_width = 0.;
+                // upper_leg_height = FRONTAL_UPPER_LEG_BIG_HEIGHT / 2.;
+                // upper_leg_depth = FRONTAL_UPPER_LEG_DEPTH / 2.;
             },
             LegType::Back => {
                 upper_leg_width = BACK_UPPER_LEG_WIDTH;
@@ -90,7 +93,7 @@ impl Leg {
             },
         }
 
-        let pivot = ( // CHANGE THIS NAME TO SELF_PIVOT_POINT
+        let pivot = ( 
             upper_leg_width, 
             upper_leg_height,
             upper_leg_depth 
@@ -118,62 +121,31 @@ impl Leg {
         let mut base_leg_model_matrix: [f32; 16];
         match self.position {
             LegType::Frontal => {
-                upper_leg_model_matrix = m4::translate_3_d( 
-                    *pre_matrix, 
-                    m4::translation( 
-                        FRONTAL_UPPER_LEG_WIDTH, 
-                        BODY_HEIGHT * 0.10,
-                        0.
-                    )
-                );
-        
-                upper_leg_model_matrix = m4::z_rotate_3_d(
-                    upper_leg_model_matrix, 
-                    m4::z_rotation( deg_to_rad( 180. ).into() ) // 180 invert + 55 up
-                );
-
-        
-                upper_leg_model_matrix = m4::translate_3_d( 
-                    upper_leg_model_matrix, 
-                    m4::translation( 
-                        - FRONTAL_UPPER_LEG_WIDTH, 
-                        0.,
-                        0.
-                    )
-                );
-
-                // LAST ROTATION
-                upper_leg_model_matrix = m4::translate_3_d( 
-                    upper_leg_model_matrix, 
-                    m4::translation( 
-                        FRONTAL_UPPER_LEG_WIDTH, 
-                        FRONTAL_UPPER_LEG_SMALL_HEIGHT,
-                        FRONTAL_UPPER_LEG_DEPTH / 2.
-                    )
-                );
-
-                let mut frontal_body_convergent_angle = (get_frontal_body_convergent_angle() as f64);
-                if leg_i == 0 {
+                let mut frontal_body_convergent_angle = get_frontal_body_convergent_angle() as f64;
+                if leg_i == 1 {
                     frontal_body_convergent_angle *= -1.;
                 }
-        
-                log(&format!("frontal body convergent angle: {:?} ", frontal_body_convergent_angle));
-        
+
                 upper_leg_model_matrix = m4::y_rotate_3_d(
-                    upper_leg_model_matrix, 
+                    *pre_matrix, 
                     m4::y_rotation( frontal_body_convergent_angle )
                 );
 
                 upper_leg_model_matrix = m4::z_rotate_3_d(
                     upper_leg_model_matrix, 
-                    m4::z_rotation( deg_to_rad( 55. ).into() ) // 180 invert + 55 up
+                    m4::z_rotation( deg_to_rad( 55. ).into() ) 
                 );
 
-                upper_leg_model_matrix = m4::translate_3_d( 
+                upper_leg_model_matrix = m4::z_rotate_3_d(
+                    upper_leg_model_matrix, 
+                    m4::z_rotation( deg_to_rad( 180. ).into() ) 
+                );
+
+                upper_leg_model_matrix = m4::translate_3_d( // here is the pivot point
                     upper_leg_model_matrix, 
                     m4::translation( 
                         - FRONTAL_UPPER_LEG_WIDTH, 
-                        - FRONTAL_UPPER_LEG_SMALL_HEIGHT,
+                        FRONTAL_UPPER_LEG_BIG_HEIGHT / 2.,
                         - FRONTAL_UPPER_LEG_DEPTH / 2.
                     )
                 );
@@ -530,18 +502,18 @@ impl Spider {
             Leg::new(
                 LegType::Frontal, 
                 ( 
-                    BODY_WIDTH, 
-                    BODY_HEIGHT / 2.75,
-                    BODY_FRONTAL_DEPTH_OFFSET / 1.5
+                    BODY_WIDTH - FRONTAL_LEG_INSET, 
+                    BODY_HEIGHT / 2.15,
+                    BODY_FRONTAL_DEPTH_OFFSET / 2.                
                 )
             ),
 
             Leg::new(
                 LegType::Frontal, 
                 ( 
-                    BODY_WIDTH, 
-                    BODY_HEIGHT / 2.75,
-                    BODY_DEPTH - BODY_FRONTAL_DEPTH_OFFSET / 1.5
+                    BODY_WIDTH - FRONTAL_LEG_INSET, 
+                    BODY_HEIGHT / 2.15,
+                    BODY_DEPTH - BODY_FRONTAL_DEPTH_OFFSET / 2.
                 )   
             )
         ];

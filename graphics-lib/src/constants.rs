@@ -15,6 +15,8 @@ pub const FRONTAL_UPPER_LEG_DEPTH: f32 = 3.25;
 pub const FRONTAL_JOINT_LEG_DEPTH: f32 = 2.;
 pub const FRONTAL_BASE_LEG_DEPTH: f32 = 1.5;
 
+pub const FRONTAL_LEG_INSET: f32 = 1.5;
+
 // BACK LEG SIZES
 pub const BACK_UPPER_LEG_WIDTH: f32 = 22.;
 pub const BACK_UPPER_LEG_BIG_HEIGHT: f32 = 2.75;
