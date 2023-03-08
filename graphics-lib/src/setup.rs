@@ -1,9 +1,5 @@
-use std::{cell::RefCell, rc::Rc};
-
-use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
-use web_sys::{WebGlRenderingContext, HtmlCanvasElement};
-
-use crate::log;
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys::WebGlRenderingContext;
 
 
 pub fn initialize_webgl_context() -> Result<(WebGlRenderingContext, web_sys::HtmlCanvasElement), JsValue> {

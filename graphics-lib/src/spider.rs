@@ -1,4 +1,6 @@
 use std::ops::Range;
+use web_sys::HtmlCanvasElement;
+
 use crate::{
     data_structures::{
         get_colors, 
@@ -9,7 +11,7 @@ use crate::{
     }, 
     modules::m4::m4::M4 as m4, 
     webgl_utils::deg_to_rad, 
-    constants::*, log
+    constants::*, log, setup_ui_control::SpiderControl
 };
 
 #[derive(PartialEq)]
@@ -49,20 +51,61 @@ impl Leg {
         }
     }
 
-    pub fn animate(&mut self, deltatime: f32) { // transfer into leg but re-understand logic before
-        println!("animate this self");
-        // let mut displacement: f32 = self.speed * deltatime; 
-                        
-        // if self.legs_direction == LegType::Back {
-        //     displacement *= -1.;
-        // }
-        
-        // self.z_acc_rotation += displacement;
+    pub fn walk_animate(&self, pre_matrix: &[f32; 16], leg_i: usize) -> [[f32; 16]; 3] {
+        let original_transformations = self.get_original_transformations(pre_matrix, leg_i);
 
-        // if !self.move_range.contains(&self.z_acc_rotation) {
-        //     self.change_direction();
-        // }
+        let animated_model_matrix = original_transformations.iter().enumerate().map(| (i, t) | {           
+            let mut angle: f32 = 0.;
+            if i == 0 {
+                angle = self.upper_and_joint_z_acc_rotation;
+            }
+
+            if i == 1 {
+                angle = self.upper_and_joint_z_acc_rotation * -1.;
+            }
+
+            if i == 2 {
+                angle = self.base_z_acc_rotation;
+            }
+            
+            let updated_model_matrix = m4::z_rotate_3_d(
+                *t, 
+                m4::z_rotation( deg_to_rad( angle ).into() ) 
+            );
+
+            updated_model_matrix
+        }).collect::<Vec<[f32; 16]>>();
+        
+
+        animated_model_matrix.try_into().unwrap()
     }
+
+    // pub fn jump_animate(&self, pre_matrix: &[f32; 16], leg_i: usize) -> [[f32; 16]; 3] {
+    //     let original_transformations = self.get_original_transformations(pre_matrix, leg_i);
+
+    //     let animated_model_matrix = original_transformations.map(| t | {
+
+    //     })
+        
+
+    //     animated_model_matrix
+    // }
+
+    
+    // pub fn animate(&mut self, deltatime: f32) { // transfer into leg but re-understand logic before
+    //     println!("animate this self");
+    //     // let mut displacement: f32 = self.speed * deltatime; 
+                        
+    //     // if self.legs_direction == LegType::Back {
+    //     //     displacement *= -1.;
+    //     // }
+        
+    //     // self.z_acc_rotation += displacement;
+
+    //     // if !self.move_range.contains(&self.z_acc_rotation) {
+    //     //     self.change_direction();
+    //     // }
+    // }
 
     fn change_direction(&mut self) {       
         println!("change direction");
@@ -111,12 +154,50 @@ impl Leg {
         upper_leg_model_matrix
     }
 
+    pub fn get_original_transformations(&self, pre_matrix: &[f32; 16], leg_i: usize) -> [[f32; 16]; 3] {
+        let upper_leg_width: f32;
+        let upper_leg_height: f32;
+        let upper_leg_depth: f32;
+        match self.position {
+            LegType::Frontal => {
+                upper_leg_width = 0.;
+                upper_leg_height = 0.;
+                upper_leg_depth = 0.;
+                // upper_leg_width = 0.;
+                // upper_leg_height = FRONTAL_UPPER_LEG_BIG_HEIGHT / 2.;
+                // upper_leg_depth = FRONTAL_UPPER_LEG_DEPTH / 2.;
+            },
+            LegType::Back => {
+                upper_leg_width = BACK_UPPER_LEG_WIDTH;
+                upper_leg_height = 0.;
+                upper_leg_depth = BACK_UPPER_LEG_DEPTH / 2.;
+            },
+            LegType::Middle => {
+                upper_leg_width = MIDDLE_UPPER_LEG_WIDTH;
+                upper_leg_height = MIDDLE_UPPER_LEG_SMALL_HEIGHT / 2.;
+                upper_leg_depth = MIDDLE_UPPER_LEG_DEPTH;
+            },
+        }
 
-    pub fn set_initial_transformations(&self, pre_matrix: &[f32; 16], leg_i: usize) -> [[f32; 16]; 3] {
+        let pivot = ( 
+            upper_leg_width, 
+            upper_leg_height,
+            upper_leg_depth 
+        );
+
+        let mut upper_leg_model_matrix = m4::translate_3_d( 
+            *pre_matrix, // what happens with dereferencing a vector
+            m4::translation( 
+                self.body_clamp_point.0 - pivot.0, 
+                self.body_clamp_point.1 - pivot.1, 
+                self.body_clamp_point.2 - pivot.2, 
+            )
+        );
+          
         let upper_leg_depth: f32;
         let joint_leg_depth: f32;
         let base_leg_depth: f32;
-        let mut upper_leg_model_matrix: [f32; 16]; 
+        //let mut upper_leg_model_matrix: [f32; 16]; 
         let mut joint_leg_model_matrix: [f32; 16]; 
         let mut base_leg_model_matrix: [f32; 16];
         match self.position {
@@ -127,7 +208,7 @@ impl Leg {
                 }
 
                 upper_leg_model_matrix = m4::y_rotate_3_d(
-                    *pre_matrix, 
+                    upper_leg_model_matrix, 
                     m4::y_rotation( frontal_body_convergent_angle )
                 );
 
@@ -186,7 +267,7 @@ impl Leg {
             },
             LegType::Back => {   
                 upper_leg_model_matrix = m4::x_rotate_3_d(
-                    *pre_matrix, 
+                    upper_leg_model_matrix, 
                     m4::x_rotation( deg_to_rad( 180. ).into() )
                 );
 
@@ -278,7 +359,7 @@ impl Leg {
             },
             LegType::Middle => {
                 upper_leg_model_matrix = m4::translate_3_d( 
-                    *pre_matrix, 
+                    upper_leg_model_matrix, 
                     m4::translation( 
                         0.,
                         0.,
@@ -478,6 +559,7 @@ impl Leg {
     
         [upper_leg_model_matrix, joint_leg_model_matrix, base_leg_model_matrix]
     }
+
 }
 
 
@@ -494,10 +576,11 @@ pub struct Spider {
     pub frontal_legs: [Leg; 2], 
     pub back_legs: [Leg; 2],
     pub middle_legs: [Leg; 6],
+    control: SpiderControl
 }
 
 impl Spider {
-    pub fn new() -> Self {
+    pub fn new(canvas: &HtmlCanvasElement) -> Self {
         let frontal_legs = [
             Leg::new(
                 LegType::Frontal, 
@@ -592,6 +675,7 @@ impl Spider {
         ];
 
         Self { 
+            control: SpiderControl::new(&canvas), // call it directly on the code
             frontal_legs,
             middle_legs,
             back_legs,       
@@ -603,7 +687,7 @@ impl Spider {
             body_colors: get_body_colors(), // call it directly on the code
             head_data: get_head_data(),
             colors: get_colors(), // call it directly on the code
-            base_leg_colors: get_base_leg_colors(), // call it directly on the code
+            base_leg_colors: get_base_leg_colors(),
         }
     }
 

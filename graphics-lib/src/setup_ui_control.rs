@@ -13,14 +13,13 @@ pub struct SetupUiControl{
     pub acc_z_translation_body: Rc<RefCell<f32>>, 
     pub acc_x_rotation_body: Rc<RefCell<f32>>, 
     pub acc_y_rotation_body: Rc<RefCell<f32>>,
-    //pub active_object: Rc<RefCell<u8>>
-    pub active_object: u8
+
 }
 
 impl SetupUiControl {
     pub fn new(canvas: &HtmlCanvasElement) -> Self {
-        let active_object = Rc::new(RefCell::new(0));   
-        let active_object_clone = active_object.clone();
+        // let active_object = Rc::new(RefCell::new(0));   
+        // let active_object_clone = active_object.clone();
 
         let z_translation = Rc::new(RefCell::new(0.));   
         let z_translation_clone = z_translation.clone();
@@ -39,144 +38,76 @@ impl SetupUiControl {
     
         let y_rotation_body = Rc::new(RefCell::new(0.));   
         let y_rotation_body_clone = y_rotation_body.clone();
-    
-        let closure = Closure::wrap(Box::new(move // move to events module (?)
+
+        let keydown_closure = Closure::wrap(Box::new(move // move to events module (?)
             |event: web_sys::KeyboardEvent| {
 
             let key_code = event.key_code();         
             log(&format!("[KEY_CODE] {}", key_code));
-            
-            //let mut active_object_handler = active_object.borrow_mut();
-            //log(&format!("[OBJECT] active_object: {} ", *active_object_handler));
-            
+                        
             if key_code == 38 {
-                // if *active_object_handler == 0 {
-                //     let x_rotation_angle = *x_rotation.borrow_mut();
-    
-                //     log(&format!("[MORE] y_rotation_angle: {} ", x_rotation_angle));
-    
-                //     *x_rotation.borrow_mut() = x_rotation_angle + 3.5;
-                // } else {
-                    let x_rotation_angle = *x_rotation_body.borrow_mut();
-    
-                    log(&format!("[MORE] y_rotation_angle: {} ", x_rotation_angle));
-    
-                    *x_rotation_body.borrow_mut() = x_rotation_angle + 3.5;
-                //}             
+                let x_rotation_angle = *x_rotation_body.borrow_mut();
+
+                log(&format!("[MORE] y_rotation_angle: {} ", x_rotation_angle));
+
+                *x_rotation_body.borrow_mut() = x_rotation_angle + 3.5;
             }
 
     
             if key_code == 40 {
-                // if *active_object_handler == 0 {
-                //     let x_rotation_angle = *x_rotation.borrow_mut();
+                let x_rotation_angle = *x_rotation_body.borrow_mut();
+
+                log(&format!("[MORE] x_rotation_angle: {} ", x_rotation_angle));
     
-                //     log(&format!("[MORE] x_rotation_angle: {} ", x_rotation_angle));
-        
-                //     *x_rotation.borrow_mut() = x_rotation_angle - 3.5;
-                // } else {
-                    let x_rotation_angle = *x_rotation_body.borrow_mut();
-    
-                    log(&format!("[MORE] x_rotation_angle: {} ", x_rotation_angle));
-        
-                    *x_rotation_body.borrow_mut() = x_rotation_angle - 3.5;
-                //}
-                
+                *x_rotation_body.borrow_mut() = x_rotation_angle - 3.5;
             }
 
 
             if key_code == 39 {  
-                //log(&format!("[OBJECT] active_object: {} ", *active_object_handler));
-                
-                // if *active_object_handler == 0 {
-                //     let y_rotation_angle = *y_rotation.borrow_mut();
-    
-                //     log(&format!("[MORE] y_rotation_angle: {} ", y_rotation_angle));
-        
-                //     *y_rotation.borrow_mut() = y_rotation_angle + 3.5;
-                // } else {
-                    let y_rotation_angle = *y_rotation_body.borrow_mut();
-    
-                    log(&format!("[MORE] y_rotation_angle: {} ", y_rotation_angle));
-    
-                    *y_rotation_body.borrow_mut() = y_rotation_angle + 3.5;
-                //}
+                let y_rotation_angle = *y_rotation_body.borrow_mut();
+
+                log(&format!("[MORE] y_rotation_angle: {} ", y_rotation_angle));
+
+                *y_rotation_body.borrow_mut() = y_rotation_angle + 3.5;
             }
 
     
             if key_code == 37 {                 
-                // if *active_object_handler == 0 {
-                //     let y_rotation_angle = *y_rotation.borrow_mut();
-    
-                //     log(&format!("[MINUS] y_rotation_angle: {} ", y_rotation_angle));
-                    
-                //     *y_rotation.borrow_mut() = y_rotation_angle - 3.5;
-                // } else {
-                    let y_rotation_angle = *y_rotation_body.borrow_mut();
-    
-                    log(&format!("[MINUS] y_rotation_angle: {} ", y_rotation_angle));
-                
-                    *y_rotation_body.borrow_mut() = y_rotation_angle - 3.5;
-                //}                
-            }
+                let y_rotation_angle = *y_rotation_body.borrow_mut();
 
-
-            if key_code == 65 {
-                // if *active_object_handler == 0 {
-                //     let z_translation_inner = *z_translation.borrow_mut();
-                
-                //     log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
-        
-                //     *z_translation.borrow_mut() = z_translation_inner + 5.;
-                // } else {
-                    let z_translation_inner = *z_translation_body.borrow_mut();
-                
-                    log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
-        
-                    *z_translation_body.borrow_mut() = z_translation_inner + 5.;
-                //}
+                log(&format!("[MINUS] y_rotation_angle: {} ", y_rotation_angle));
+            
+                *y_rotation_body.borrow_mut() = y_rotation_angle - 3.5;
             }
 
 
             if key_code == 32 {
-                // if *active_object_handler == 0 {
-                //     let z_translation_inner = *z_translation.borrow_mut();
-                
-                //     log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
-    
-                //     *z_translation.borrow_mut() = z_translation_inner - 5.;
-                // } else {
-                    let z_translation_inner = *z_translation_body.borrow_mut();
-                
-                    log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
-    
-                    *z_translation_body.borrow_mut() = z_translation_inner - 5.;
-                //}               
-            }
+                let z_translation_inner = *z_translation_body.borrow_mut();
+            
+                log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
 
+                *z_translation_body.borrow_mut() = z_translation_inner - 5.;
+            }
+        
 
             if key_code == 13 {  
-                //let mut active_object_handler = active_object.borrow_mut();
-                
-                //log(&format!("[OBJECT] active_object: {} ", *active_object_handler));
-                
-                // if *active_object_handler == 0 {
-                //     *active_object_handler = 1;
-                // } else {
-                //     *active_object_handler = 0;
-                // }
+                let z_translation_inner = *z_translation_body.borrow_mut();
+            
+                log(&format!("[MINUS] z_translation: {} ", z_translation_inner));
+    
+                *z_translation_body.borrow_mut() = z_translation_inner + 5.;
+        
             }
         }) as Box<dyn FnMut(_)>);
     
-        canvas.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref()).unwrap(); // ?
-        closure.forget();
-        
+        canvas.add_event_listener_with_callback("keydown", keydown_closure.as_ref().unchecked_ref()).unwrap(); // ?
+        keydown_closure.forget();
            
         Self {
             is_active: true,
             acc_z_translation: z_translation_clone,
             acc_x_rotation: x_rotation_clone,
             acc_y_rotation: y_rotation_clone,
-            active_object: 1,
             acc_z_translation_body: z_translation_body_clone,
             acc_x_rotation_body: x_rotation_body_clone,
             acc_y_rotation_body: y_rotation_body_clone,
@@ -193,14 +124,105 @@ impl SetupUiControl {
 
 }
 
-// create some type of relationship to make more clear
-enum KeyboardKeys {
-    Space(u8),
-    Enter(u8),
-    DirectionalR(u8),
-    DirectionalL(u8),
-    DirectionalD(u8),
-    DirectionalU(u8),
-    A(u8) 
+
+pub struct SpiderControl{
+    pub is_active: bool,
+    pub go_forward: Rc<RefCell<bool>>,    
+    pub go_back: Rc<RefCell<bool>>,    
+    pub turn_left: Rc<RefCell<bool>>,    
+    pub turn_right: Rc<RefCell<bool>>,    
 }
 
+impl SpiderControl {
+    pub fn new(canvas: &HtmlCanvasElement) -> Self {
+        let go_forward = Rc::new(RefCell::new(false));   
+        let go_forward_clone = go_forward.clone();
+
+        let go_back = Rc::new(RefCell::new(false));   
+        let go_back_clone = go_back.clone();
+
+        let turn_left = Rc::new(RefCell::new(false));   
+        let turn_left_clone = turn_left.clone();
+
+        let turn_right = Rc::new(RefCell::new(false));   
+        let turn_right_clone = turn_right.clone();
+    
+        let keydown_closure = Closure::wrap(Box::new(move // move to events module (?)
+            |event: web_sys::KeyboardEvent| {
+
+            let key_code = event.key_code();         
+            log(&format!("[KEY_CODE] {}", key_code));
+                        
+            // spider control
+            if key_code == 65 {
+                // turn left
+                *turn_left.borrow_mut() = true;
+            }
+
+            if key_code == 68 {
+                // turn right
+                *turn_right.borrow_mut() = true;
+            }
+
+            if key_code == 87 {
+                // go forward
+                *go_forward.borrow_mut() = true;
+            }
+
+            if key_code == 83 {
+                // go back
+                *go_back.borrow_mut() = true;
+            }
+        }) as Box<dyn FnMut(_)>);
+
+        // let keyup_closure = Closure::wrap(Box::new(move // move to events module (?)
+        //     |event: web_sys::KeyboardEvent| {
+
+        //     let key_code = event.key_code();         
+        //     log(&format!("[KEY_CODE] {}", key_code));
+                        
+        //     // spider control
+        //     if key_code == 65 {
+        //         // turn left
+        //         //*turn_left.borrow_mut() = false;
+        //     }
+
+        //     if key_code == 68 {
+        //         // turn right
+        //         //*turn_right.borrow_mut() = false;
+        //     }
+
+        //     if key_code == 87 {
+        //         // go forward
+        //         //*go_forward.borrow_mut() = false;
+        //     }
+
+        //     if key_code == 83 {
+        //         // go back
+        //         //*go_back.borrow_mut() = false;
+        //     }
+        // }) as Box<dyn FnMut(_)>);
+    
+        canvas.add_event_listener_with_callback("keydown", keydown_closure.as_ref().unchecked_ref()).unwrap(); // ?
+        //canvas.add_event_listener_with_callback("keyup", keyup_closure.as_ref().unchecked_ref()).unwrap(); // ?
+        keydown_closure.forget();
+        //keyup_closure.forget();
+           
+        Self {
+            go_forward: go_forward_clone,
+            go_back: go_back_clone,
+            turn_left: turn_left_clone,
+            turn_right: turn_right_clone,
+            is_active: true,
+        }
+    }
+
+    fn disable_control(&mut self) {
+        self.is_active = false;
+    }
+
+    fn enable_control(&mut self) {
+        self.is_active = true;
+    }
+
+}

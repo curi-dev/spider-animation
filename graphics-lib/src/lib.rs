@@ -71,13 +71,13 @@ impl GraphicsClient {
         let ui_control = SetupUiControl::new(&canvas);
 
         Self {
+            spider: Spider::new(&canvas),
             canvas,
             gl,
             ui_control,
             a_positions:a_positions_loc,
             u_matrix:u_matrix_loc,
             a_color:a_color_loc, 
-            spider: Spider::new(),
         }      
     }
 
@@ -91,7 +91,7 @@ impl GraphicsClient {
         let ui_rotation_x_body = self.ui_control.acc_x_rotation_body.try_borrow().unwrap();
         let ui_rotation_y_body = self.ui_control.acc_y_rotation_body.try_borrow().unwrap();
         let ui_translate_z_body = self.ui_control.acc_z_translation_body.try_borrow().unwrap();
-        
+    
         // creating the model matrix for the body
         let mut body_model_matrix = m4::perspective(
             deg_to_rad(DEFAULT_FIELD_OF_VIEW_IN_RADIANS),
@@ -155,14 +155,13 @@ impl GraphicsClient {
             &head_model_matrix
         );
 
-        for (i, leg) in self.spider.frontal_legs.iter().enumerate() {
-            let positions_buffer = self.gl.create_buffer().unwrap(); 
-            let colors_buffer = self.gl.create_buffer().unwrap(); 
-            let pivot_point_model_matrix = leg.set_pivot_point(&body_model_matrix);
-            let initial_transformations_model_matrix = leg.set_initial_transformations(&pivot_point_model_matrix, i);
-            for (j, model_matrix) in initial_transformations_model_matrix.iter().enumerate() {                
+        for (i, leg) in self.spider.frontal_legs.iter().enumerate() {   
+            
+            let animation_model_matrix = leg.walk_animate(&body_model_matrix, i);
+            
+            for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
                 self.send_positions_to_gpu(&leg.vertex_data[j], &positions_buffer);
-
+                
                 if i == 2 { // only for base leg 
                     self.send_colors_to_gpu(&self.spider.base_leg_colors, &colors_buffer);
                 } else {
@@ -177,14 +176,13 @@ impl GraphicsClient {
             }            
         }
 
-        for (i, leg) in self.spider.back_legs.iter().enumerate() {
-            let positions_buffer = self.gl.create_buffer().unwrap(); 
-            let colors_buffer = self.gl.create_buffer().unwrap(); 
-            let pivot_point_model_matrix = leg.set_pivot_point(&body_model_matrix);
-            let initial_transformations_model_matrix = leg.set_initial_transformations(&pivot_point_model_matrix, i);
-            for (j, model_matrix) in initial_transformations_model_matrix.iter().enumerate() {    
+        for (i, leg) in self.spider.back_legs.iter().enumerate() {   
+            
+            let animation_model_matrix = leg.walk_animate(&body_model_matrix, i);
+            
+            for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
                 self.send_positions_to_gpu(&leg.vertex_data[j], &positions_buffer);
-
+                
                 if i == 2 { // only for base leg 
                     self.send_colors_to_gpu(&self.spider.base_leg_colors, &colors_buffer);
                 } else {
@@ -199,14 +197,13 @@ impl GraphicsClient {
             }            
         }
 
-        for (i, leg) in self.spider.middle_legs.iter().enumerate() {
-            let positions_buffer = self.gl.create_buffer().unwrap(); 
-            let colors_buffer = self.gl.create_buffer().unwrap(); 
-            let pivot_point_model_matrix = leg.set_pivot_point(&body_model_matrix);
-            let initial_transformations_model_matrix = leg.set_initial_transformations(&pivot_point_model_matrix, i);
-            for (j, model_matrix) in initial_transformations_model_matrix.iter().enumerate() {    
+        for (i, leg) in self.spider.middle_legs.iter().enumerate() {   
+            
+            let animation_model_matrix = leg.walk_animate(&body_model_matrix, i);
+            
+            for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
                 self.send_positions_to_gpu(&leg.vertex_data[j], &positions_buffer);
-
+                
                 if i == 2 { // only for base leg 
                     self.send_colors_to_gpu(&self.spider.base_leg_colors, &colors_buffer);
                 } else {
@@ -219,7 +216,7 @@ impl GraphicsClient {
                     model_matrix
                 );
             }            
-        }
+        }      
     }
 
     fn send_positions_to_gpu(&self, positions: &[f32], positions_buffer: &WebGlBuffer) {
