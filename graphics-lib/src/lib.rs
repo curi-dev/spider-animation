@@ -1,8 +1,8 @@
 use std::panic;
 use console_error_panic_hook;
-use js_sys::WebAssembly;
-use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::{WebGlRenderingContext, HtmlCanvasElement, WebGlUniformLocation, HtmlImageElement, WebGlBuffer};
+use wasm_bindgen::prelude::*;
+use web_sys::HtmlCanvasElement;
+use web_sys::HtmlImageElement;
 use web_sys::WebGlRenderingContext as Gl;
 
 mod modules; // mod modules? not good
@@ -15,6 +15,8 @@ mod setup_ui_control;
 mod spider;
 mod data_structures;
 mod constants;
+mod leg;
+mod gpu_interface;
 
 use setup::initialize_webgl_context;
 use modules::m4::m4::M4 as m4;
@@ -23,6 +25,7 @@ use programs::base::ProgramBuilder;
 use setup_ui_control::SetupUiControl;
 
 use crate::constants::*;
+use crate::gpu_interface::GpuInterface;
 use crate::programs::base::Program;
 
 use crate::spider::Spider; // separate types and data structures 
@@ -39,13 +42,14 @@ extern "C" {
 
 #[wasm_bindgen]
 pub struct GraphicsClient {
-    gl: WebGlRenderingContext,
+    //gl: WebGlRenderingContext,
     canvas: HtmlCanvasElement,
-    a_positions: i32,
-    u_matrix: WebGlUniformLocation,
-    a_color: i32,
+    // a_positions: i32,
+    // u_matrix: WebGlUniformLocation,
+    // a_color: i32,
     ui_control: SetupUiControl,
     spider: spider::Spider,
+    gpu_interface: GpuInterface
 }
 
 unsafe impl Send for GraphicsClient {}
@@ -57,35 +61,31 @@ impl GraphicsClient {
     pub fn new(_image: HtmlImageElement) -> Self {    
         panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-        let (gl, canvas, ) = initialize_webgl_context().unwrap(); // transfer to initialize_events()
+        let (gl, canvas, ) = initialize_webgl_context().unwrap(); 
         
         // create and compile shaders & link the program with these shaders (can pass the shaders here [dependency inversion]) 
         let program = ProgramBuilder::build(&gl, Program::Program3); // refactor!
-
-        let a_positions_loc = gl.get_attrib_location(&program, "aPosition");
-        let u_matrix_loc = gl.get_uniform_location(&program, "uMatrix").unwrap();
-        let a_color_loc = gl.get_attrib_location(&program, "aColor");
 
         gl.use_program(Some(&program));
 
         let ui_control = SetupUiControl::new(&canvas);
 
+        let gpu_interface = GpuInterface::new(gl, &program);
+
         Self {
             spider: Spider::new(&canvas),
             canvas,
-            gl,
+            gpu_interface,
             ui_control,
-            a_positions:a_positions_loc,
-            u_matrix:u_matrix_loc,
-            a_color:a_color_loc, 
         }      
     }
 
 
     pub fn render(&mut self) {          
         //deltatime = deltatime / 1000.;
-        self.gl.clear(Gl::COLOR_BUFFER_BIT);
-        resize_canvas_to_display_size(&self.gl, &self.canvas);
+        self.gpu_interface.gl.clear(Gl::COLOR_BUFFER_BIT);
+        resize_canvas_to_display_size(&self.gpu_interface.gl, &self.canvas);
+        
         let aspect = (self.canvas.client_width() / self.canvas.client_height()) as f32;
 
         let ui_rotation_x_body = self.ui_control.acc_x_rotation_body.try_borrow().unwrap();
@@ -127,150 +127,29 @@ impl GraphicsClient {
         // calculation, while webgl is used for rendering and displaying the data on the
         // client-side. this buffer is not being persisted on rust's layout memory, but rather
         // in the graphics card's memory on the client-side
-        let positions_buffer = self.gl.create_buffer().unwrap(); 
-        let colors_buffer = self.gl.create_buffer().unwrap(); 
+        let positions_buffer = self.gpu_interface.gl.create_buffer().unwrap();  
+        let colors_buffer = self.gpu_interface.gl.create_buffer().unwrap(); 
         
-        self.send_positions_to_gpu(&self.spider.body_data, &positions_buffer);
-        self.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
+
+        // self.send_positions_to_gpu(&self.spider.head_data, &positions_buffer);
+        // self.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
         
-        self.consume_data(
-            self.spider.body_data.len() as i32 / 3, 
-            Gl::TRIANGLES, 
-            &body_model_matrix
-        );
-        // ROUND ONE DONE -> BODY
+        // let head_model_matrix = m4::translate_3_d(body_model_matrix, m4::translation(
+        //     BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 
+        //     3., 
+        //     BODY_DEPTH / 2. - HEAD_DEPTH / 2. 
+        // ));
 
-        self.send_positions_to_gpu(&self.spider.head_data, &positions_buffer);
-        self.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
-        
-        let head_model_matrix = m4::translate_3_d(body_model_matrix, m4::translation(
-            BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 
-            3., 
-            BODY_DEPTH / 2. - HEAD_DEPTH / 2. 
-        ));
-
-        self.consume_data(
-            self.spider.head_data.len() as i32 / 3, 
-            Gl::TRIANGLES, 
-            &head_model_matrix
-        );
-
-        for (i, leg) in self.spider.frontal_legs.iter().enumerate() {   
-            
-            let animation_model_matrix = leg.walk_animate(&body_model_matrix, i);
-            
-            for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
-                self.send_positions_to_gpu(&leg.vertex_data[j], &positions_buffer);
-                
-                if i == 2 { // only for base leg 
-                    self.send_colors_to_gpu(&self.spider.base_leg_colors, &colors_buffer);
-                } else {
-                    self.send_colors_to_gpu(&self.spider.colors, &colors_buffer);
-                }
-                
-                self.consume_data(
-                    leg.vertex_data[j].len() as i32 / 3, 
-                    Gl::TRIANGLES, 
-                    model_matrix
-                );
-            }            
-        }
-
-        for (i, leg) in self.spider.back_legs.iter().enumerate() {   
-            
-            let animation_model_matrix = leg.walk_animate(&body_model_matrix, i);
-            
-            for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
-                self.send_positions_to_gpu(&leg.vertex_data[j], &positions_buffer);
-                
-                if i == 2 { // only for base leg 
-                    self.send_colors_to_gpu(&self.spider.base_leg_colors, &colors_buffer);
-                } else {
-                    self.send_colors_to_gpu(&self.spider.colors, &colors_buffer);
-                }
-                
-                self.consume_data(
-                    leg.vertex_data[j].len() as i32 / 3, 
-                    Gl::TRIANGLES, 
-                    model_matrix
-                );
-            }            
-        }
-
-        for (i, leg) in self.spider.middle_legs.iter().enumerate() {   
-            
-            let animation_model_matrix = leg.walk_animate(&body_model_matrix, i);
-            
-            for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
-                self.send_positions_to_gpu(&leg.vertex_data[j], &positions_buffer);
-                
-                if i == 2 { // only for base leg 
-                    self.send_colors_to_gpu(&self.spider.base_leg_colors, &colors_buffer);
-                } else {
-                    self.send_colors_to_gpu(&self.spider.colors, &colors_buffer);
-                }
-                
-                self.consume_data(
-                    leg.vertex_data[j].len() as i32 / 3, 
-                    Gl::TRIANGLES, 
-                    model_matrix
-                );
-            }            
-        }      
-    }
-
-    fn send_positions_to_gpu(&self, positions: &[f32], positions_buffer: &WebGlBuffer) {
-        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(positions_buffer));
-
-        self.gl.vertex_attrib_pointer_with_i32(
-            self.a_positions as u32, 
-            3, 
-            Gl::FLOAT, 
-            false, 
-            0, 
-            0,
-        );
-
-        let memory_buffer_view = wasm_bindgen::memory() // persist this memory buffer?
-        .dyn_into::<WebAssembly::Memory>()
-        .unwrap()
-        .buffer();
-
-        let ptr_mem_loc = positions.as_ptr() as u32 / 4; // 4 bytes each
-        let coords_ptr = js_sys::Float32Array::new(&memory_buffer_view)
-            .subarray(ptr_mem_loc, ptr_mem_loc + positions.len() as u32);
-        self.gl.buffer_data_with_array_buffer_view(Gl::ARRAY_BUFFER, &coords_ptr, Gl::DYNAMIC_DRAW);
-        self.gl.enable_vertex_attrib_array(self.a_color as u32);
-    }
-
-    fn send_colors_to_gpu(&self, colors: &[u8], colors_buffer: &WebGlBuffer) {
-        self.gl.bind_buffer(Gl::ARRAY_BUFFER, Some(colors_buffer));
-        
-        self.gl.vertex_attrib_pointer_with_i32(
-            self.a_color as u32, 
-            3, 
-            Gl::UNSIGNED_BYTE, 
-            true, 
-            0, 
-            0,
-        );
-
-        let memory_buffer_view = wasm_bindgen::memory() // persist this memory buffer?
-        .dyn_into::<WebAssembly::Memory>()
-        .unwrap()
-        .buffer();
-
-        let ptr_mem_loc = colors.as_ptr() as u32; // 4 bytes each
-        let coords_ptr = js_sys::Uint8Array::new(&memory_buffer_view)
-            .subarray(ptr_mem_loc, ptr_mem_loc + colors.len() as u32);
-        self.gl.buffer_data_with_array_buffer_view(Gl::ARRAY_BUFFER, &coords_ptr, Gl::STATIC_DRAW);
-        self.gl.enable_vertex_attrib_array(self.a_positions as u32);
-    }
+        // self.consume_data(
+        //     self.spider.head_data.len() as i32 / 3, 
+        //     Gl::TRIANGLES, 
+        //     &head_model_matrix
+        // );  
+        self.spider.animate_body(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer);
+        self.spider.animate_front_legs(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer);
+        self.spider.animate_back_legs(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer);
+        self.spider.animate_middle_legs(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer)
     
-    fn consume_data(&self, vert_count: i32, mode: u32, model_matrix: &[f32; 16]) {
-        self.gl.uniform_matrix4fv_with_f32_array(Some(&self.u_matrix), false, model_matrix);
-        
-        self.gl.draw_arrays(mode, 0, vert_count);
     }
 }
 
