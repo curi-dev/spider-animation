@@ -17,6 +17,7 @@ mod data_structures;
 mod constants;
 mod leg;
 mod gpu_interface;
+mod matrix_stack;
 
 use setup::initialize_webgl_context;
 use modules::m4::m4::M4 as m4;
@@ -87,6 +88,7 @@ impl GraphicsClient {
         resize_canvas_to_display_size(&self.gpu_interface.gl, &self.canvas);
         
         let aspect = (self.canvas.client_width() / self.canvas.client_height()) as f32;
+        //let aspect = ( self.canvas.client_height() / self.canvas.client_width() ) as f32;
 
         let ui_rotation_x_body = self.ui_control.acc_x_rotation_body.try_borrow().unwrap();
         let ui_rotation_y_body = self.ui_control.acc_y_rotation_body.try_borrow().unwrap();
@@ -145,10 +147,22 @@ impl GraphicsClient {
         //     Gl::TRIANGLES, 
         //     &head_model_matrix
         // );  
-        self.spider.animate_body(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer);
-        self.spider.animate_front_legs(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer);
-        self.spider.animate_back_legs(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer);
-        self.spider.animate_middle_legs(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer)
+
+        self.spider.animate_body(
+            &self.gpu_interface, 
+            &body_model_matrix, 
+            &positions_buffer, 
+            &colors_buffer);
+
+        self.spider.animate_front_legs(
+            &self.gpu_interface, 
+            &body_model_matrix, 
+            &positions_buffer, 
+            &colors_buffer
+        );
+
+        //self.spider.animate_back_legs(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer);
+        //self.spider.animate_middle_legs(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer)
     
     }
 }

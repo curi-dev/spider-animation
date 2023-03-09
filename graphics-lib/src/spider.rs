@@ -7,7 +7,7 @@ use crate::{
         get_body_colors, 
         get_body_data, get_head_data
     }, 
-    constants::*, setup_ui_control::SpiderControl, leg::Leg, gpu_interface::GpuInterface
+    constants::*, setup_ui_control::SpiderControl, leg::Leg, gpu_interface::GpuInterface, matrix_stack::MatrixStack, log
 };
 
 
@@ -32,11 +32,12 @@ pub struct Spider {
     pub back_legs: [Leg; 2],
     pub middle_legs: [Leg; 6],
     control: SpiderControl,
-    //gpu_interface: GpuInterface
+    pub animation_matrix_stack: MatrixStack
 }
 
 impl Spider {
     pub fn new(canvas: &HtmlCanvasElement) -> Self {
+        //ITERATE OVER RANGES OR NUMBER OF LEGS FOR LESS CODE
         let frontal_legs = [
             Leg::new(
                 LegType::Frontal, 
@@ -144,6 +145,7 @@ impl Spider {
             head_data: get_head_data(),
             colors: get_colors(), // call it directly on the code
             base_leg_colors: get_base_leg_colors(),
+            animation_matrix_stack: MatrixStack { stack: Vec::new() },
         }
     }
 
@@ -158,12 +160,20 @@ impl Spider {
         );
     }
 
-    pub fn animate_front_legs(&self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
-        for (i, leg) in self.frontal_legs.iter().enumerate() {   
+    pub fn animate_front_legs(&mut self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
+        for (i, leg) in self.frontal_legs.iter_mut().enumerate() {   
             
-            let animation_model_matrix = leg.walk_animate(&body_model_matrix, i);
             
-            for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
+            let animation_model_matrices = leg.walk_animate(
+                &body_model_matrix, // reference
+                &self.control.direction.try_borrow().unwrap(),
+                i,
+                &mut self.animation_matrix_stack
+            );
+
+            log(&format!("animation models: {:?} ", animation_model_matrices));
+
+            for (j, model_matrix) in animation_model_matrices.iter().enumerate() {                
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
                 
                 if i == 2 { // only for base leg 
@@ -175,16 +185,21 @@ impl Spider {
                 gpu_interface.consume_data(
                     leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
-                    model_matrix
+                    &model_matrix.unwrap()
                 );
             }            
         }
     }
 
-    pub fn animate_back_legs(&self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
-        for (i, leg) in self.back_legs.iter().enumerate() {   
+    pub fn animate_back_legs(&mut self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
+        for (i, leg) in self.back_legs.iter_mut().enumerate() {   
             
-            let animation_model_matrix = leg.walk_animate(&body_model_matrix, i);
+            let animation_model_matrix = leg.walk_animate(
+                &body_model_matrix,
+                &self.control.direction.try_borrow().unwrap(), 
+                i,
+                &mut self.animation_matrix_stack
+            );
             
             for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
@@ -198,16 +213,21 @@ impl Spider {
                 gpu_interface.consume_data(
                     leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
-                    model_matrix
+                    &model_matrix.unwrap()
                 );
             }            
         }
     }
 
-    pub fn animate_middle_legs(&self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
-        for (i, leg) in self.middle_legs.iter().enumerate() {   
+    pub fn animate_middle_legs(&mut self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
+        for (i, leg) in self.middle_legs.iter_mut().enumerate() {   
             
-            let animation_model_matrix = leg.walk_animate(&body_model_matrix, i);
+            let animation_model_matrix = leg.walk_animate(
+                &body_model_matrix,
+                &self.control.direction.try_borrow().unwrap(),
+                i,
+                &mut self.animation_matrix_stack
+            );
             
             for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
@@ -221,7 +241,7 @@ impl Spider {
                 gpu_interface.consume_data(
                     leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
-                    model_matrix
+                    &model_matrix.unwrap()
                 );
             }            
         }

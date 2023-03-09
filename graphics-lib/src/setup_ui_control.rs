@@ -124,9 +124,16 @@ impl SetupUiControl {
 
 }
 
-
+pub enum Move {
+    Forward,
+    Left,
+    Right,
+    Jump,
+    Static
+}
 pub struct SpiderControl{
     pub is_active: bool,
+    pub direction: Rc<RefCell<Move>>,
     pub go_forward: Rc<RefCell<bool>>,    
     pub go_back: Rc<RefCell<bool>>,    
     pub turn_left: Rc<RefCell<bool>>,    
@@ -146,6 +153,9 @@ impl SpiderControl {
 
         let turn_right = Rc::new(RefCell::new(false));   
         let turn_right_clone = turn_right.clone();
+
+        let direction = Rc::new(RefCell::new(Move::Static));   
+        let direction_clone = direction.clone();
     
         let keydown_closure = Closure::wrap(Box::new(move // move to events module (?)
             |event: web_sys::KeyboardEvent| {
@@ -157,16 +167,19 @@ impl SpiderControl {
             if key_code == 65 {
                 // turn left
                 *turn_left.borrow_mut() = true;
+                *direction.borrow_mut() = Move::Left;
             }
 
             if key_code == 68 {
                 // turn right
                 *turn_right.borrow_mut() = true;
+                *direction.borrow_mut() = Move::Right;
             }
 
             if key_code == 87 {
                 // go forward
                 *go_forward.borrow_mut() = true;
+                *direction.borrow_mut() = Move::Forward;
             }
 
             if key_code == 83 {
@@ -209,6 +222,7 @@ impl SpiderControl {
         //keyup_closure.forget();
            
         Self {
+            direction: direction_clone,
             go_forward: go_forward_clone,
             go_back: go_back_clone,
             turn_left: turn_left_clone,
