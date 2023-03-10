@@ -485,9 +485,6 @@ impl Leg {
                     let clamping_model_matrix = m4::translate_3_d( 
                         *pre_matrix, // what happens with dereferencing a vector
                         m4::translation( 
-                            // self.body_clamp_point.0 - BACK_UPPER_LEG_WIDTH, 
-                            // self.body_clamp_point.1 - 0., 
-                            // self.body_clamp_point.2 - BACK_UPPER_LEG_DEPTH / 2., 
                             self.body_clamp_point.0 - 0., 
                             self.body_clamp_point.1 - 0., 
                             self.body_clamp_point.2 - 0., 
@@ -769,16 +766,7 @@ impl Leg {
                 );
 
             } else { // side II
-               
-                // upper_leg_model_matrix = m4::translate_3_d( 
-                //     upper_leg_model_matrix, 
-                //     m4::translation( 
-                //         MIDDLE_UPPER_LEG_WIDTH,
-                //         0.,
-                //         MIDDLE_UPPER_LEG_DEPTH / 2.
-                //     )
-                // );
-
+            
                 upper_leg_model_matrix = m4::y_rotate_3_d(
                     upper_leg_model_matrix, 
                     m4::y_rotation( deg_to_rad( 90. ).into() )
