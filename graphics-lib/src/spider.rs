@@ -82,59 +82,43 @@ impl Spider {
             )
         ];
 
-        let middle_legs = [
-            // Leg::new(
-            //     LegType::Middle, 
-            //     (  
-            //         BODY_WIDTH / 3. / 2.,
-            //         BODY_HEIGHT / 2.45,
-            //         FRONTAL_UPPER_LEG_DEPTH
-            //     ),
-            //     0
-            // ),
+        let mut middle_legs = [
             Leg::new(
                 LegType::Middle, 
                 (  
-                    (BODY_WIDTH / 3. * 2.) - BODY_WIDTH / 3. / 2.,
-                    BODY_HEIGHT / 2.125,
-                    FRONTAL_UPPER_LEG_DEPTH
+                    BODY_WIDTH / 2. / 2.,
+                    BODY_HEIGHT / 2.1,
+                    0.
                 ),
                 0
             ),
+           
             Leg::new(
                 LegType::Middle, 
                 (  
-                    (BODY_WIDTH / 3. * 3.) - BODY_WIDTH / 3. / 2.,
-                    BODY_HEIGHT / 2.45,
-                    FRONTAL_UPPER_LEG_DEPTH
+                    BODY_WIDTH - (BODY_WIDTH / 2. / 2.),
+                    BODY_HEIGHT / 2.1,
+                    0.
                 ),
                 0
             ),
 
             // OTHER SIDE
-            // Leg::new(
-            //     LegType::Middle, 
-            //     (  
-            //         BODY_WIDTH / 3. / 2.,
-            //         BODY_HEIGHT / 2.45,
-            //         BODY_DEPTH,
-            //     ),
-            //     0
-            // ),
             Leg::new(
                 LegType::Middle, 
                 (  
-                    (BODY_WIDTH / 3. * 2.) - BODY_WIDTH / 3. / 2.,
-                    BODY_HEIGHT / 2.125,
+                    BODY_WIDTH / 2. / 2.,
+                    BODY_HEIGHT / 2.1,
                     BODY_DEPTH
                 ),
                 0
             ),
+            
             Leg::new(
                 LegType::Middle, 
                 (  
-                    (BODY_WIDTH / 3. * 3.) - BODY_WIDTH / 3. / 2.,
-                    BODY_HEIGHT / 2.45,
+                    BODY_WIDTH - (BODY_WIDTH / 2. / 2.),
+                    BODY_HEIGHT / 2.1,
                     BODY_DEPTH
                 ),
                 0
@@ -145,10 +129,14 @@ impl Spider {
         frontal_legs[0].start_moving(); 
         frontal_legs[1].start_moving();
         back_legs[0].start_moving(); 
-        back_legs[1].start_moving(); 
+        back_legs[1].start_moving();
+        middle_legs[0].start_moving(); 
+        //middle_legs[1].start_moving(); 
+        // middle_legs[2].start_moving(); 
+        // middle_legs[3].start_moving(); 
 
         Self { 
-            control: SpiderControl::new(&canvas), // call it directly on the code
+            control: SpiderControl::new(&canvas), // CharControl
             frontal_legs,
             middle_legs,
             back_legs,       

@@ -21,12 +21,13 @@ pub struct Leg {
 
 impl Leg {
     pub fn new(leg_position: LegType, body_clamp_point: (f32, f32, f32), move_cycle: u8) -> Self {
+        
         // upper, joint and base
         let vertex_data = get_leg_data(&leg_position);
     
         Self {
             vertex_data,
-            body_clamp_point, // what type of translation and is accumulated?
+            body_clamp_point, 
             position: leg_position,
             upper_move_range: Range { start: -24.5, end: 5. },
             joint_move_range: Range { start: 0., end: 17. },
@@ -476,10 +477,135 @@ impl Leg {
                     }
                 }
             } 
-        } else {
-            animation_models[0] = Some(m4::identity());  
-            animation_models[1] = Some(m4::identity());  
-            animation_models[1] = Some(m4::identity());  
+        } else { // middle legs
+            for leg_part in 0..3 { // make it more semanthic
+                
+                if leg_part == 0 { // upper part
+
+                    let clamping_model_matrix = m4::translate_3_d( 
+                        *pre_matrix, // what happens with dereferencing a vector
+                        m4::translation( 
+                            // self.body_clamp_point.0 - BACK_UPPER_LEG_WIDTH, 
+                            // self.body_clamp_point.1 - 0., 
+                            // self.body_clamp_point.2 - BACK_UPPER_LEG_DEPTH / 2., 
+                            self.body_clamp_point.0 - 0., 
+                            self.body_clamp_point.1 - 0., 
+                            self.body_clamp_point.2 - 0., 
+                        )
+                    );
+
+                    let original_transformation = self.get_middle_leg_transformation(
+                        clamping_model_matrix, 
+                        leg_part, 
+                        leg_i 
+                    );
+
+                    if !self.is_moving {
+
+                        animation_models[0] = Some(original_transformation);
+                        animation_matrix_stack.push(original_transformation); 
+
+                    } else {
+                        match direction {
+                            Move::Forward => {
+                                println!("move forward");
+                            },
+                            Move::Left => {
+                                println!("move left!");
+                            },
+                            Move::Right => {
+                                println!("move right!");
+                            },
+                            Move::Jump => {
+                                println!("move jump!");
+                            },
+                            Move::Static => {
+                                println!("no move!");
+                            },
+                        }
+    
+                        ////////// animations below
+                       
+                        ////////// animations above
+                     
+                        animation_models[0] = Some(original_transformation); 
+                        animation_matrix_stack.push(original_transformation); 
+                    }
+                } else {
+        
+                    let clamping_model_matrix = animation_matrix_stack.last().unwrap();
+
+                    let original_transformation = self.get_middle_leg_transformation(
+                        *clamping_model_matrix, 
+                        leg_part, 
+                        leg_i 
+                    );
+
+                    if !self.is_moving {
+                        animation_models[leg_part] = Some(original_transformation);
+                        animation_matrix_stack.push(original_transformation); 
+
+                        if leg_part == 2 {
+                            animation_matrix_stack.drain(..);
+                        }
+                    } else {
+                        if leg_part == 1 { // joint
+                            match direction {
+                                Move::Forward => {
+                                    println!("move forward");
+                                },
+                                Move::Left => {
+                                    println!("move left!");
+                                },
+                                Move::Right => {
+                                    println!("move right!");
+                                },
+                                Move::Jump => {
+                                    println!("move jump!");
+                                },
+                                Move::Static => {
+                                    println!("no move!");
+                                },
+                            }
+                            
+                            ////////// animations below
+                            
+                            ////////// animations above
+                         
+                            animation_models[1] = Some(original_transformation);
+                            animation_matrix_stack.push(original_transformation); 
+                        }
+
+                        if leg_part == 2 { // base
+                            match direction {
+                                Move::Forward => {
+                                    println!("move forward");
+                                },
+                                Move::Left => {
+                                    println!("move left!");
+                                },
+                                Move::Right => {
+                                    println!("move right!");
+                                },
+                                Move::Jump => {
+                                    println!("move jump!");
+                                },
+                                Move::Static => {
+                                    println!("no move!");
+                                },
+                            }
+
+                            ////////// animations below
+                            
+                    
+                            ////////// animations above
+                                                      
+                            animation_models[2] = Some(original_transformation);                         
+                            animation_matrix_stack.drain(..); 
+                        }
+                    }
+                }
+            } 
             
             return animation_models
         }       
@@ -488,6 +614,10 @@ impl Leg {
     }
 
     
+    // 0 = upper   -   0 = left
+    // 1 = joint   -   1 = right
+    // 2 = base
+    // in case of setting upper leg dont forget to send the transformed pivot point
     pub fn get_back_leg_transformation(&self, pre_matrix: [f32; 16], leg_part: usize, leg_i: usize) -> [f32; 16] {
         
         if leg_part == 0 {
@@ -552,7 +682,7 @@ impl Leg {
                 
             let mut joint_leg_model_matrix = m4::z_rotate_3_d(
                 pre_matrix, 
-                m4::z_rotation(deg_to_rad(-95.).into())
+                m4::z_rotation(deg_to_rad(-100.).into())
             );
                 
             joint_leg_model_matrix = m4::translate_3_d( 
@@ -584,210 +714,154 @@ impl Leg {
         }
     }
 
-    // pub fn get_middle_leg_transformation(&self, pre_matrix: [f32; 16], leg_part: usize, leg_i: usize) -> [f32; 16] {
-    //     if leg_part == 0 {
-    //         let mut upper_leg_model_matrix = m4::translate_3_d( 
-    //             pre_matrix, 
-    //             m4::identity()
-    //         );
-
-    //         if leg_i < 3 {
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     MIDDLE_UPPER_LEG_WIDTH,
-    //                     (MIDDLE_UPPER_LEG_BIG_HEIGHT - MIDDLE_UPPER_LEG_SMALL_HEIGHT) * -1.,
-    //                     MIDDLE_UPPER_LEG_DEPTH / 2.,
-    //                 )
-    //             );
-
-    //             upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::y_rotation( deg_to_rad( -90. ).into() )
-    //             );
-               
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     - MIDDLE_UPPER_LEG_WIDTH, 
-    //                     MIDDLE_UPPER_LEG_BIG_HEIGHT - MIDDLE_UPPER_LEG_SMALL_HEIGHT,
-    //                     ( MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.
-    //                 )
-    //             );
-
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     MIDDLE_UPPER_LEG_WIDTH,
-    //                     0.,
-    //                     MIDDLE_UPPER_LEG_DEPTH / 2.,
-    //                 )
-    //             );
-        
-    //             upper_leg_model_matrix = m4::x_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::x_rotation( deg_to_rad(-180.).into() ) // 180 invert + 55 up
-    //             );
-
-    //             upper_leg_model_matrix = m4::z_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::z_rotation( deg_to_rad(55.).into() ) // 180 invert + 55 up
-    //             );
-
-    //             // rotate the end legs in 15 degrees 
-    //             if leg_i == 0 {
-    //                 upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                     upper_leg_model_matrix, 
-    //                     m4::y_rotation( deg_to_rad( -7. ).into() ) // 180 invert + 55 up
-    //                 );
-    //             }
-
-    //             if leg_i == 2 {
-    //                 upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                     upper_leg_model_matrix, 
-    //                     m4::y_rotation( deg_to_rad( 7. ).into() ) // 180 invert + 55 up
-    //                 );
-    //             }
-        
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     - MIDDLE_UPPER_LEG_WIDTH,
-    //                     0.,
-    //                     (MIDDLE_UPPER_LEG_DEPTH / 2.) * -1.,
-    //                 )
-    //             );
-    //         } else {
-    //             // other side legs
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     MIDDLE_UPPER_LEG_WIDTH,
-    //                     0.,
-    //                     MIDDLE_UPPER_LEG_DEPTH / 2.
-    //                 )
-    //             );
-
-    //             upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::y_rotation( deg_to_rad( 90. ).into() )
-    //             );
-
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     - MIDDLE_UPPER_LEG_WIDTH, 
-    //                     0.,
-    //                      (MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.,
-    //                 )
-    //             );
-
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     - MIDDLE_UPPER_LEG_WIDTH,
-    //                     0.,
-    //                     MIDDLE_UPPER_LEG_DEPTH / 2.,
-    //                 )
-    //             );
-
-    //             upper_leg_model_matrix = m4::x_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::x_rotation( deg_to_rad( -180. ).into() ) // 180 invert + 55 up
-    //             );
-                
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     MIDDLE_UPPER_LEG_WIDTH,
-    //                     0.,
-    //                     ( MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.,
-    //                 )
-    //             );
-
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     MIDDLE_UPPER_LEG_WIDTH,
-    //                     0.,
-    //                     MIDDLE_UPPER_LEG_DEPTH / 2.,
-    //                 )
-    //             );
-
-    //             upper_leg_model_matrix = m4::z_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::z_rotation( deg_to_rad( 55.).into() ) 
-    //             );
-
-    //             // rotate the end legs in 15 degrees 
-    //             if leg_i == 3 {
-    //                 upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                     upper_leg_model_matrix, 
-    //                     m4::y_rotation( deg_to_rad( 7. ).into() ) // 180 invert + 55 up
-    //                 );
-    //             }
-
-    //             if leg_i == 5 {
-    //                 upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                     upper_leg_model_matrix, 
-    //                     m4::y_rotation( deg_to_rad( -7. ).into() ) // 180 invert + 55 up
-    //                 );
-    //             }
-
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     - MIDDLE_UPPER_LEG_WIDTH,
-    //                     0.,
-    //                     ( MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.,
-    //                 )
-    //             );
-
-    //         }
-            
-    //         return upper_leg_model_matrix
-        
-    //     } else if leg_part == 1 {
-    //         let mut joint_leg_model_matrix = m4::z_rotate_3_d(
-    //             pre_matrix, 
-    //             m4::z_rotation(deg_to_rad(-95.).into())
-    //         );
-            
-    //         joint_leg_model_matrix = m4::translate_3_d( // INVERT THE NAMES
-    //             joint_leg_model_matrix, 
-    //             m4::translation(
-    //             MIDDLE_JOINT_LEG_WIDTH * -1., // adjust distance by width 
-    //             MIDDLE_UPPER_LEG_BIG_HEIGHT / 2. - MIDDLE_JOINT_LEG_BIG_HEIGHT / 2., // same y
-    //             MIDDLE_UPPER_LEG_DEPTH / 2. - MIDDLE_JOINT_LEG_DEPTH / 2. // adjust depth (1.5) - do not need to have same depth because only upper is rotating by its center
-    //             )
-    //         );
-
-    //         return joint_leg_model_matrix
-            
-    //     } else {
-    //         // base leg transformations
-    //         let mut base_leg_model_matrix = m4::z_rotate_3_d(
-    //             pre_matrix, 
-    //             m4::z_rotation( deg_to_rad(163.).into() )
-    //         );    
-    //         base_leg_model_matrix = m4::translate_3_d(
-    //             base_leg_model_matrix, 
-    //             m4::translation(
-    //             0.,
-    //             ((FRONTAL_JOINT_LEG_BIG_HEIGHT / 2.) + (FRONTAL_BOTTOM_LEG_HEIGHT / 2.)) * -1.,
-    //             (MIDDLE_JOINT_LEG_DEPTH / 2.) - (MIDDLE_BASE_LEG_DEPTH / 2.), 
-    //             )
-    //         );
-
-    //         return base_leg_model_matrix
-
-    //     }
-    // }
 
     // 0 = upper   -   0 = left
     // 1 = joint   -   1 = right
     // 2 = base
-    // in case of is upper leg dont forget to send the transformed pivot point
+    // in case of setting upper leg dont forget to send the transformed pivot point
+    pub fn get_middle_leg_transformation(&self, pre_matrix: [f32; 16], leg_part: usize, leg_i: usize) -> [f32; 16] {
+        if leg_part == 0 {
+            let mut upper_leg_model_matrix = m4::translate_3_d( 
+                pre_matrix, 
+                m4::identity()
+            );
+
+            if leg_i < 2 { // side I
+
+                upper_leg_model_matrix = m4::y_rotate_3_d(
+                    upper_leg_model_matrix, 
+                    m4::y_rotation( deg_to_rad( -90. ).into() )
+                );
+                
+
+                upper_leg_model_matrix = m4::x_rotate_3_d(
+                    upper_leg_model_matrix, 
+                    m4::x_rotation( deg_to_rad( -180. ).into() ) // 180 invert + 55 up
+                );
+
+                upper_leg_model_matrix = m4::z_rotate_3_d(
+                    upper_leg_model_matrix, 
+                    m4::z_rotation( deg_to_rad( 55. ).into() ) 
+                );
+
+                if leg_i == 0 {
+                    upper_leg_model_matrix = m4::y_rotate_3_d(
+                        upper_leg_model_matrix, 
+                        m4::y_rotation( deg_to_rad( -7. ).into() ) // 180 invert + 55 up
+                    );
+                }
+
+                if leg_i == 1 {
+                    upper_leg_model_matrix = m4::y_rotate_3_d(
+                        upper_leg_model_matrix, 
+                        m4::y_rotation( deg_to_rad( 7. ).into() ) // 180 invert + 55 up
+                    );
+                }
+
+                upper_leg_model_matrix = m4::translate_3_d( 
+                    upper_leg_model_matrix, 
+                    m4::translation( 
+                        - MIDDLE_UPPER_LEG_WIDTH + 2., 
+                        //MIDDLE_UPPER_LEG_BIG_HEIGHT - MIDDLE_UPPER_LEG_SMALL_HEIGHT,
+                        0.,
+                        (MIDDLE_UPPER_LEG_DEPTH / 2.) * -1.
+                    )
+                );
+
+            } else { // side II
+               
+                // upper_leg_model_matrix = m4::translate_3_d( 
+                //     upper_leg_model_matrix, 
+                //     m4::translation( 
+                //         MIDDLE_UPPER_LEG_WIDTH,
+                //         0.,
+                //         MIDDLE_UPPER_LEG_DEPTH / 2.
+                //     )
+                // );
+
+                upper_leg_model_matrix = m4::y_rotate_3_d(
+                    upper_leg_model_matrix, 
+                    m4::y_rotation( deg_to_rad( 90. ).into() )
+                );
+
+                upper_leg_model_matrix = m4::x_rotate_3_d(
+                    upper_leg_model_matrix, 
+                    m4::x_rotation( deg_to_rad( -180. ).into() ) // 180 invert + 55 up
+                );
+
+                upper_leg_model_matrix = m4::z_rotate_3_d(
+                    upper_leg_model_matrix, 
+                    m4::z_rotation( deg_to_rad( 55.).into() ) 
+                );
+
+                if leg_i == 2 {
+                    upper_leg_model_matrix = m4::y_rotate_3_d(
+                        upper_leg_model_matrix, 
+                        m4::y_rotation( deg_to_rad( 7. ).into() ) // 180 invert + 55 up
+                    );
+                }
+
+                if leg_i == 3 {
+                    upper_leg_model_matrix = m4::y_rotate_3_d(
+                        upper_leg_model_matrix, 
+                        m4::y_rotation( deg_to_rad( -7. ).into() ) // 180 invert + 55 up
+                    );
+                }
+
+                upper_leg_model_matrix = m4::translate_3_d( 
+                    upper_leg_model_matrix, 
+                    m4::translation( 
+                        - MIDDLE_UPPER_LEG_WIDTH + 2., 
+                        //MIDDLE_UPPER_LEG_BIG_HEIGHT - MIDDLE_UPPER_LEG_SMALL_HEIGHT,
+                        0.,
+                        (MIDDLE_UPPER_LEG_DEPTH / 2.) * -1.
+                    )
+                );
+            }
+            
+            return upper_leg_model_matrix
+        
+        } else if leg_part == 1 {
+            let mut joint_leg_model_matrix = m4::z_rotate_3_d(
+                pre_matrix, 
+                m4::z_rotation(deg_to_rad(-95.).into())
+            );
+            
+            joint_leg_model_matrix = m4::translate_3_d( 
+                joint_leg_model_matrix, 
+                m4::translation(
+                MIDDLE_JOINT_LEG_WIDTH * -1., 
+                MIDDLE_UPPER_LEG_BIG_HEIGHT / 2. - MIDDLE_JOINT_LEG_BIG_HEIGHT / 2., 
+                MIDDLE_UPPER_LEG_DEPTH / 2. - MIDDLE_JOINT_LEG_DEPTH / 2. 
+                )
+            );
+
+            return joint_leg_model_matrix
+            
+        } else {
+            // base leg transformations
+            let mut base_leg_model_matrix = m4::z_rotate_3_d(
+                pre_matrix, 
+                m4::z_rotation( deg_to_rad(163.).into() )
+            );    
+            base_leg_model_matrix = m4::translate_3_d(
+                base_leg_model_matrix, 
+                m4::translation(
+                0.,
+                ((FRONTAL_JOINT_LEG_BIG_HEIGHT / 2.) + (FRONTAL_BOTTOM_LEG_HEIGHT / 2.)) * -1.,
+                (MIDDLE_JOINT_LEG_DEPTH / 2.) - (MIDDLE_BASE_LEG_DEPTH / 2.), 
+                )
+            );
+
+            return base_leg_model_matrix
+
+        }
+    }
+
+    // 0 = upper   -   0 = left
+    // 1 = joint   -   1 = right
+    // 2 = base
+    // in case of setting upper leg dont forget to send the transformed pivot point
     pub fn get_frontal_leg_transformation(&self, pre_matrix: [f32; 16], leg_part: usize, leg_i: usize) -> [f32; 16] {
         
         if leg_part == 0 { // upper
@@ -857,414 +931,6 @@ impl Leg {
             return base_leg_model_matrix;
         }
     }
-
-
-    // pub fn get_original_transformations(&self, pre_matrix: &[f32; 16], leg_i: usize) -> [[f32; 16]; 3] {
-    //     let upper_leg_width: f32;
-    //     let upper_leg_height: f32;
-    //     let upper_leg_depth: f32;
-    //     match self.position {
-    //         LegType::Frontal => {
-    //             // helps to start transformations at the right pivot point
-    //             upper_leg_width = 0.;
-    //             upper_leg_height = 0.;
-    //             upper_leg_depth = 0.;
-    //             // upper_leg_width = 0.;
-    //             // upper_leg_height = FRONTAL_UPPER_LEG_BIG_HEIGHT / 2.;
-    //             // upper_leg_depth = FRONTAL_UPPER_LEG_DEPTH / 2.;
-    //         },
-    //         LegType::Back => {
-    //             upper_leg_width = BACK_UPPER_LEG_WIDTH;
-    //             upper_leg_height = 0.;
-    //             upper_leg_depth = BACK_UPPER_LEG_DEPTH / 2.;
-    //         },
-    //         LegType::Middle => {
-    //             upper_leg_width = MIDDLE_UPPER_LEG_WIDTH;
-    //             upper_leg_height = MIDDLE_UPPER_LEG_SMALL_HEIGHT / 2.;
-    //             upper_leg_depth = MIDDLE_UPPER_LEG_DEPTH;
-    //         },
-    //     }
-
-    //     let pivot = ( 
-    //         upper_leg_width, 
-    //         upper_leg_height,
-    //         upper_leg_depth 
-    //     );
-
-    //     let mut upper_leg_model_matrix = m4::translate_3_d( 
-    //         *pre_matrix, // what happens with dereferencing a vector
-    //         m4::translation( 
-    //             self.body_clamp_point.0 - pivot.0, 
-    //             self.body_clamp_point.1 - pivot.1, 
-    //             self.body_clamp_point.2 - pivot.2, 
-    //         )
-    //     );
-          
-    //     let upper_leg_depth: f32;
-    //     let joint_leg_depth: f32;
-    //     let base_leg_depth: f32;
-     
-    //     let mut joint_leg_model_matrix: [f32; 16]; 
-    //     let mut base_leg_model_matrix: [f32; 16];
-    //     match self.position {
-    //         LegType::Frontal => {
-    //             let mut frontal_body_convergent_angle = get_frontal_body_convergent_angle() as f64;
-    //             if leg_i == 1 {
-    //                 frontal_body_convergent_angle *= -1.;
-    //             }
-
-    //             upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::y_rotation( frontal_body_convergent_angle )
-    //             );
-
-    //             upper_leg_model_matrix = m4::z_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::z_rotation( deg_to_rad( 55. ).into() ) 
-    //             );
-
-    //             upper_leg_model_matrix = m4::z_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::z_rotation( deg_to_rad( 180. ).into() ) 
-    //             );
-
-    //             upper_leg_model_matrix = m4::translate_3_d( // here is the pivot point
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     - FRONTAL_UPPER_LEG_WIDTH, 
-    //                     FRONTAL_UPPER_LEG_BIG_HEIGHT / 2.,
-    //                     - FRONTAL_UPPER_LEG_DEPTH / 2.
-    //                 )
-    //             );
-
-    //             // joint leg transformations
-    //             upper_leg_depth = FRONTAL_UPPER_LEG_DEPTH;
-    //             joint_leg_depth = FRONTAL_JOINT_LEG_DEPTH;
-    //             base_leg_depth = FRONTAL_BASE_LEG_DEPTH;
-                
-    //             joint_leg_model_matrix = m4::z_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::z_rotation(deg_to_rad(-102.).into())
-    //             );
-                
-    //             joint_leg_model_matrix = m4::translate_3_d( // INVERT THE NAMES
-    //                 joint_leg_model_matrix, 
-    //                 m4::translation(
-    //                 FRONTAL_JOINT_LEG_WIDTH * -1., // adjust distance by width 
-    //                 FRONTAL_UPPER_LEG_BIG_HEIGHT / 2. - FRONTAL_JOINT_LEG_BIG_HEIGHT / 2., // same y
-    //                 upper_leg_depth / 2. - joint_leg_depth / 2. // adjust depth (1.5) - do not need to have same depth because only upper is rotating by its center
-    //                 )
-    //             );
-                
-    //             // base leg transformations
-    //             base_leg_model_matrix = m4::z_rotate_3_d(
-    //                 joint_leg_model_matrix, 
-    //                 m4::z_rotation( deg_to_rad(163.).into() )
-    //             );    
-    //             base_leg_model_matrix = m4::translate_3_d(
-    //                 base_leg_model_matrix, 
-    //                 m4::translation(
-    //                 0.,
-    //                 ((FRONTAL_JOINT_LEG_BIG_HEIGHT / 2.) + (FRONTAL_BOTTOM_LEG_HEIGHT / 2.)) * -1.,
-    //                 (joint_leg_depth / 2.) - (base_leg_depth / 2.), 
-    //                 )
-    //             );
-
-    //         },
-    //         LegType::Back => {   
-    //             upper_leg_model_matrix = m4::x_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::x_rotation( deg_to_rad( 180. ).into() )
-    //             );
-
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, // clamp matrix
-    //                 m4::translation( 
-    //                     FRONTAL_UPPER_LEG_WIDTH, 
-    //                     0.,
-    //                     - FRONTAL_UPPER_LEG_DEPTH
-    //                 )
-    //             );
-
-    //             let mut back_body_convergent_angle = get_back_body_convergent_angle() as f64;
-    //             if leg_i == 0 {
-    //                 back_body_convergent_angle *= -1.;
-    //             }
-
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, // clamp matrix
-    //                 m4::translation( 
-    //                     0., 
-    //                     - FRONTAL_UPPER_LEG_SMALL_HEIGHT,
-    //                     FRONTAL_UPPER_LEG_DEPTH / 2.
-    //                 )
-    //             );
-
-    //             upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::y_rotation( back_body_convergent_angle )
-    //             );
-
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, // clamp matrix
-    //                 m4::translation( 
-    //                     0., 
-    //                     FRONTAL_UPPER_LEG_SMALL_HEIGHT,
-    //                     - FRONTAL_UPPER_LEG_DEPTH / 2.
-    //                 )
-    //             );
-
-    //             upper_leg_model_matrix = m4::z_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::z_rotation( deg_to_rad( 35. ).into() )
-    //             );
-
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, // clamp matrix
-    //                 m4::translation( 
-    //                     - FRONTAL_UPPER_LEG_WIDTH, 
-    //                     0.,
-    //                     0.
-    //                 )
-    //             );
-
-    //             // joint leg transformations
-    //             upper_leg_depth = BACK_UPPER_LEG_DEPTH;
-    //             joint_leg_depth = BACK_JOINT_LEG_DEPTH;
-    //             base_leg_depth = FRONTAL_BASE_LEG_DEPTH;  
-                
-    //             joint_leg_model_matrix = m4::z_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::z_rotation(deg_to_rad(-95.).into())
-    //             );
-                
-    //             joint_leg_model_matrix = m4::translate_3_d( // INVERT THE NAMES
-    //                 joint_leg_model_matrix, 
-    //                 m4::translation(
-    //                 FRONTAL_JOINT_LEG_WIDTH * -1., // adjust distance by width 
-    //                 FRONTAL_UPPER_LEG_BIG_HEIGHT / 2. - FRONTAL_JOINT_LEG_BIG_HEIGHT / 2., // same y
-    //                 upper_leg_depth / 2. - joint_leg_depth / 2. // adjust depth (1.5) - do not need to have same depth because only upper is rotating by its center
-    //                 )
-    //             );
-                
-    //             // base leg transformations
-    //             base_leg_model_matrix = m4::z_rotate_3_d(
-    //                 joint_leg_model_matrix, 
-    //                 m4::z_rotation( deg_to_rad(163.).into() )
-    //             );    
-    //             base_leg_model_matrix = m4::translate_3_d(
-    //                 base_leg_model_matrix, 
-    //                 m4::translation(
-    //                 0.,
-    //                 ((FRONTAL_JOINT_LEG_BIG_HEIGHT / 2.) + (FRONTAL_BOTTOM_LEG_HEIGHT / 2.)) * -1.,
-    //                 (joint_leg_depth / 2.) - (base_leg_depth / 2.), 
-    //                 )
-    //             );
-
-                
-    //         },
-    //         LegType::Middle => {
-    //             upper_leg_model_matrix = m4::translate_3_d( 
-    //                 upper_leg_model_matrix, 
-    //                 m4::translation( 
-    //                     0.,
-    //                     0.,
-    //                     0.,
-    //                 )
-    //             );
-
-    //             if leg_i < 3 {
-    //                 upper_leg_model_matrix = m4::translate_3_d( 
-    //                     upper_leg_model_matrix, 
-    //                     m4::translation( 
-    //                         MIDDLE_UPPER_LEG_WIDTH,
-    //                         (MIDDLE_UPPER_LEG_BIG_HEIGHT - MIDDLE_UPPER_LEG_SMALL_HEIGHT) * -1.,
-    //                         MIDDLE_UPPER_LEG_DEPTH / 2.,
-    //                     )
-    //                 );
-
-    //                 upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                     upper_leg_model_matrix, 
-    //                     m4::y_rotation( deg_to_rad( -90. ).into() )
-    //                 );
-                   
-    //                 upper_leg_model_matrix = m4::translate_3_d( 
-    //                     upper_leg_model_matrix, 
-    //                     m4::translation( 
-    //                         - MIDDLE_UPPER_LEG_WIDTH, 
-    //                         MIDDLE_UPPER_LEG_BIG_HEIGHT - MIDDLE_UPPER_LEG_SMALL_HEIGHT,
-    //                         ( MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.
-    //                     )
-    //                 );
-    
-    //                 upper_leg_model_matrix = m4::translate_3_d( 
-    //                     upper_leg_model_matrix, 
-    //                     m4::translation( 
-    //                         MIDDLE_UPPER_LEG_WIDTH,
-    //                         0.,
-    //                         MIDDLE_UPPER_LEG_DEPTH / 2.,
-    //                     )
-    //                 );
-            
-    //                 upper_leg_model_matrix = m4::x_rotate_3_d(
-    //                     upper_leg_model_matrix, 
-    //                     m4::x_rotation( deg_to_rad(-180.).into() ) // 180 invert + 55 up
-    //                 );
-    
-    //                 upper_leg_model_matrix = m4::z_rotate_3_d(
-    //                     upper_leg_model_matrix, 
-    //                     m4::z_rotation( deg_to_rad(55.).into() ) // 180 invert + 55 up
-    //                 );
-
-    //                 // rotate the end legs in 15 degrees 
-    //                 if leg_i == 0 {
-    //                     upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                         upper_leg_model_matrix, 
-    //                         m4::y_rotation( deg_to_rad( -7. ).into() ) // 180 invert + 55 up
-    //                     );
-    //                 }
-
-    //                 if leg_i == 2 {
-    //                     upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                         upper_leg_model_matrix, 
-    //                         m4::y_rotation( deg_to_rad( 7. ).into() ) // 180 invert + 55 up
-    //                     );
-    //                 }
-            
-    //                 upper_leg_model_matrix = m4::translate_3_d( 
-    //                     upper_leg_model_matrix, 
-    //                     m4::translation( 
-    //                         - MIDDLE_UPPER_LEG_WIDTH,
-    //                         0.,
-    //                         (MIDDLE_UPPER_LEG_DEPTH / 2.) * -1.,
-    //                     )
-    //                 );
-    //             } else {
-    //                 // other side legs
-    //                 upper_leg_model_matrix = m4::translate_3_d( 
-    //                     upper_leg_model_matrix, 
-    //                     m4::translation( 
-    //                         MIDDLE_UPPER_LEG_WIDTH,
-    //                         0.,
-    //                         MIDDLE_UPPER_LEG_DEPTH / 2.
-    //                     )
-    //                 );
-
-    //                 upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                     upper_leg_model_matrix, 
-    //                     m4::y_rotation( deg_to_rad( 90. ).into() )
-    //                 );
-
-    //                 upper_leg_model_matrix = m4::translate_3_d( 
-    //                     upper_leg_model_matrix, 
-    //                     m4::translation( 
-    //                         - MIDDLE_UPPER_LEG_WIDTH, 
-    //                         0.,
-    //                          (MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.,
-    //                     )
-    //                 );
-
-    //                 upper_leg_model_matrix = m4::translate_3_d( 
-    //                     upper_leg_model_matrix, 
-    //                     m4::translation( 
-    //                         - MIDDLE_UPPER_LEG_WIDTH,
-    //                         0.,
-    //                         MIDDLE_UPPER_LEG_DEPTH / 2.,
-    //                     )
-    //                 );
-
-    //                 upper_leg_model_matrix = m4::x_rotate_3_d(
-    //                     upper_leg_model_matrix, 
-    //                     m4::x_rotation( deg_to_rad( -180. ).into() ) // 180 invert + 55 up
-    //                 );
-                    
-    //                 upper_leg_model_matrix = m4::translate_3_d( 
-    //                     upper_leg_model_matrix, 
-    //                     m4::translation( 
-    //                         MIDDLE_UPPER_LEG_WIDTH,
-    //                         0.,
-    //                         ( MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.,
-    //                     )
-    //                 );
-
-    //                 upper_leg_model_matrix = m4::translate_3_d( 
-    //                     upper_leg_model_matrix, 
-    //                     m4::translation( 
-    //                         MIDDLE_UPPER_LEG_WIDTH,
-    //                         0.,
-    //                         MIDDLE_UPPER_LEG_DEPTH / 2.,
-    //                     )
-    //                 );
-
-    //                 upper_leg_model_matrix = m4::z_rotate_3_d(
-    //                     upper_leg_model_matrix, 
-    //                     m4::z_rotation( deg_to_rad( 55.).into() ) 
-    //                 );
-
-    //                 // rotate the end legs in 15 degrees 
-    //                 if leg_i == 3 {
-    //                     upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                         upper_leg_model_matrix, 
-    //                         m4::y_rotation( deg_to_rad( 7. ).into() ) // 180 invert + 55 up
-    //                     );
-    //                 }
-
-    //                 if leg_i == 5 {
-    //                     upper_leg_model_matrix = m4::y_rotate_3_d(
-    //                         upper_leg_model_matrix, 
-    //                         m4::y_rotation( deg_to_rad( -7. ).into() ) // 180 invert + 55 up
-    //                     );
-    //                 }
-
-    //                 upper_leg_model_matrix = m4::translate_3_d( 
-    //                     upper_leg_model_matrix, 
-    //                     m4::translation( 
-    //                         - MIDDLE_UPPER_LEG_WIDTH,
-    //                         0.,
-    //                         ( MIDDLE_UPPER_LEG_DEPTH / 2. ) * -1.,
-    //                     )
-    //                 );
-    //             }
-
-    //             // joint leg transformations
-    //             upper_leg_depth = MIDDLE_UPPER_LEG_DEPTH;
-    //             joint_leg_depth = MIDDLE_JOINT_LEG_DEPTH;
-    //             base_leg_depth = MIDDLE_BASE_LEG_DEPTH; 
-                
-    //             joint_leg_model_matrix = m4::z_rotate_3_d(
-    //                 upper_leg_model_matrix, 
-    //                 m4::z_rotation(deg_to_rad(-95.).into())
-    //             );
-                
-    //             joint_leg_model_matrix = m4::translate_3_d( // INVERT THE NAMES
-    //                 joint_leg_model_matrix, 
-    //                 m4::translation(
-    //                 MIDDLE_JOINT_LEG_WIDTH * -1., // adjust distance by width 
-    //                 MIDDLE_UPPER_LEG_BIG_HEIGHT / 2. - MIDDLE_JOINT_LEG_BIG_HEIGHT / 2., // same y
-    //                 upper_leg_depth / 2. - joint_leg_depth / 2. // adjust depth (1.5) - do not need to have same depth because only upper is rotating by its center
-    //                 )
-    //             );
-                
-    //             // base leg transformations
-    //             base_leg_model_matrix = m4::z_rotate_3_d(
-    //                 joint_leg_model_matrix, 
-    //                 m4::z_rotation( deg_to_rad(163.).into() )
-    //             );    
-    //             base_leg_model_matrix = m4::translate_3_d(
-    //                 base_leg_model_matrix, 
-    //                 m4::translation(
-    //                 0.,
-    //                 ((FRONTAL_JOINT_LEG_BIG_HEIGHT / 2.) + (FRONTAL_BOTTOM_LEG_HEIGHT / 2.)) * -1.,
-    //                 (joint_leg_depth / 2.) - (base_leg_depth / 2.), 
-    //                 )
-    //             );
-
-    //         }
-    //     }
-        
-    
-    //     [upper_leg_model_matrix, joint_leg_model_matrix, base_leg_model_matrix]
-    // }
 
 }
 
