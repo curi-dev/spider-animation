@@ -30,22 +30,23 @@ pub struct Spider {
     pub body_z_acc_rotation: f32, 
     pub frontal_legs: [Leg; 2], 
     pub back_legs: [Leg; 2],
-    pub middle_legs: [Leg; 6],
+    pub middle_legs: [Leg; 4],
     control: SpiderControl,
     pub animation_matrix_stack: MatrixStack
 }
 
 impl Spider {
     pub fn new(canvas: &HtmlCanvasElement) -> Self {
-        //ITERATE OVER RANGES OR NUMBER OF LEGS FOR LESS CODE
-        let frontal_legs = [
+        //ITERATE OVER RANGES OR NUMBER OF LEGS FOR LESS CODE or LEG BUILDER
+        let mut frontal_legs = [
             Leg::new(
                 LegType::Frontal, 
                 ( 
                     BODY_WIDTH - FRONTAL_LEG_INSET, 
                     BODY_HEIGHT / 2.15,
                     BODY_FRONTAL_DEPTH_OFFSET / 2.                
-                )
+                ),
+                0
             ),
 
             Leg::new(
@@ -54,18 +55,20 @@ impl Spider {
                     BODY_WIDTH - FRONTAL_LEG_INSET, 
                     BODY_HEIGHT / 2.15,
                     BODY_DEPTH - BODY_FRONTAL_DEPTH_OFFSET / 2.
-                )   
+                ),
+                1   
             )
         ];
 
-        let back_legs = [
+        let mut back_legs = [
             Leg::new(
                 LegType::Back, 
                 ( 
                     0., 
                     BODY_HEIGHT / 2.75,
                     BODY_DEPTH - BODY_BACK_DEPTH_OFFSET / 2.
-                )
+                ),
+                0
             ),
 
             Leg::new(
@@ -74,26 +77,29 @@ impl Spider {
                     0.,
                     BODY_HEIGHT / 2.75,
                     BODY_BACK_DEPTH_OFFSET / 2.
-                )
+                ),
+                1,
             )
         ];
 
         let middle_legs = [
-            Leg::new(
-                LegType::Middle, 
-                (  
-                    BODY_WIDTH / 3. / 2.,
-                    BODY_HEIGHT / 2.45,
-                    FRONTAL_UPPER_LEG_DEPTH
-                )
-            ),
+            // Leg::new(
+            //     LegType::Middle, 
+            //     (  
+            //         BODY_WIDTH / 3. / 2.,
+            //         BODY_HEIGHT / 2.45,
+            //         FRONTAL_UPPER_LEG_DEPTH
+            //     ),
+            //     0
+            // ),
             Leg::new(
                 LegType::Middle, 
                 (  
                     (BODY_WIDTH / 3. * 2.) - BODY_WIDTH / 3. / 2.,
                     BODY_HEIGHT / 2.125,
                     FRONTAL_UPPER_LEG_DEPTH
-                )
+                ),
+                0
             ),
             Leg::new(
                 LegType::Middle, 
@@ -101,25 +107,28 @@ impl Spider {
                     (BODY_WIDTH / 3. * 3.) - BODY_WIDTH / 3. / 2.,
                     BODY_HEIGHT / 2.45,
                     FRONTAL_UPPER_LEG_DEPTH
-                )
+                ),
+                0
             ),
 
             // OTHER SIDE
-            Leg::new(
-                LegType::Middle, 
-                (  
-                    BODY_WIDTH / 3. / 2.,
-                    BODY_HEIGHT / 2.45,
-                    BODY_DEPTH,
-                )
-            ),
+            // Leg::new(
+            //     LegType::Middle, 
+            //     (  
+            //         BODY_WIDTH / 3. / 2.,
+            //         BODY_HEIGHT / 2.45,
+            //         BODY_DEPTH,
+            //     ),
+            //     0
+            // ),
             Leg::new(
                 LegType::Middle, 
                 (  
                     (BODY_WIDTH / 3. * 2.) - BODY_WIDTH / 3. / 2.,
                     BODY_HEIGHT / 2.125,
                     BODY_DEPTH
-                )
+                ),
+                0
             ),
             Leg::new(
                 LegType::Middle, 
@@ -127,9 +136,16 @@ impl Spider {
                     (BODY_WIDTH / 3. * 3.) - BODY_WIDTH / 3. / 2.,
                     BODY_HEIGHT / 2.45,
                     BODY_DEPTH
-                )
+                ),
+                0
             ),
         ];
+        
+        // here i can active specific legs to start animation
+        frontal_legs[0].start_moving(); 
+        frontal_legs[1].start_moving();
+        back_legs[0].start_moving(); 
+        back_legs[1].start_moving(); 
 
         Self { 
             control: SpiderControl::new(&canvas), // call it directly on the code
@@ -163,15 +179,12 @@ impl Spider {
     pub fn animate_front_legs(&mut self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
         for (i, leg) in self.frontal_legs.iter_mut().enumerate() {   
             
-            
             let animation_model_matrices = leg.walk_animate(
                 &body_model_matrix, // reference
                 &self.control.direction.try_borrow().unwrap(),
                 i,
                 &mut self.animation_matrix_stack
             );
-
-            log(&format!("animation models: {:?} ", animation_model_matrices));
 
             for (j, model_matrix) in animation_model_matrices.iter().enumerate() {                
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
@@ -187,7 +200,8 @@ impl Spider {
                     Gl::TRIANGLES, 
                     &model_matrix.unwrap()
                 );
-            }            
+            }
+            
         }
     }
 
@@ -245,39 +259,7 @@ impl Spider {
                 );
             }            
         }
-    }
-
-    // fn change_direction(&mut self) {       
-    //     match self.legs_direction {
-    //         LegType::Back => self.legs_direction = LegType::Frontal,
-    //         LegType::Frontal => self.legs_direction = LegType::Back,
-    //         LegType::Middle => todo!(),
-    //     }
-    // }
-
-    // pub fn animate_front_legs(&mut self, deltatime: f32) { // transfer into leg but re-understand logic before
-    //     let mut displacement: f32 = self.speed * deltatime; // angle_displacement
-                        
-    //     if self.legs_direction == LegType::Back {
-    //         displacement *= -1.;
-    //     }
-        
-    //     self.z_acc_rotation += displacement;
-
-    //     if !self.move_range.contains(&self.z_acc_rotation) {
-    //         self.change_direction();
-    //     }
-    // }
-
-    // pub fn animate_middle_legs(&mut self) {
-    //     println!("animate middle legs");
-    // }
-
-    // pub fn animate_back_legs(&mut self) {
-    //     println!("animate back legs");
-    // }
-
-    
+    } 
 }
 
 

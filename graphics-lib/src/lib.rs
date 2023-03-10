@@ -161,8 +161,19 @@ impl GraphicsClient {
             &colors_buffer
         );
 
-        //self.spider.animate_back_legs(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer);
-        //self.spider.animate_middle_legs(&self.gpu_interface, &body_model_matrix, &positions_buffer, &colors_buffer)
+        self.spider.animate_back_legs(
+            &self.gpu_interface, 
+            &body_model_matrix, 
+            &positions_buffer, 
+            &colors_buffer
+        );
+        
+        self.spider.animate_middle_legs(
+            &self.gpu_interface, 
+            &body_model_matrix, 
+            &positions_buffer, 
+            &colors_buffer
+        );
     
     }
 }
