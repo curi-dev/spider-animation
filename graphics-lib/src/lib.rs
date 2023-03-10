@@ -132,10 +132,22 @@ impl GraphicsClient {
         let positions_buffer = self.gpu_interface.gl.create_buffer().unwrap();  
         let colors_buffer = self.gpu_interface.gl.create_buffer().unwrap(); 
         
+        
+        // returns the new translated body model matrix
+        let body_model_matrix = self.spider.animate_body(
+            &self.gpu_interface, 
+            &body_model_matrix, 
+            &positions_buffer, 
+            &colors_buffer
+        );
+
+        // head below
         self.gpu_interface.send_positions_to_gpu(&self.spider.head_data, &positions_buffer);
         self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
         
-        let head_model_matrix = m4::translate_3_d(body_model_matrix, m4::translation(
+        let head_model_matrix = m4::translate_3_d(
+            body_model_matrix, 
+            m4::translation(
             BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 
             3., 
             BODY_DEPTH / 2. - HEAD_DEPTH / 2. 
@@ -145,13 +157,8 @@ impl GraphicsClient {
             self.spider.head_data.len() as i32 / 3, 
             Gl::TRIANGLES, 
             &head_model_matrix
-        );  
-
-        self.spider.animate_body(
-            &self.gpu_interface, 
-            &body_model_matrix, 
-            &positions_buffer, 
-            &colors_buffer);
+        );
+        // head above  
 
         self.spider.animate_front_legs(
             &self.gpu_interface, 

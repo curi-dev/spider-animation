@@ -7,7 +7,7 @@ use crate::{
         get_body_colors, 
         get_body_data, get_head_data
     }, 
-    constants::*, setup_ui_control::SpiderControl, leg::Leg, gpu_interface::GpuInterface, matrix_stack::MatrixStack, log
+    constants::*, setup_ui_control::{SpiderControl, Move}, leg::Leg, gpu_interface::GpuInterface, matrix_stack::MatrixStack, log, modules::m4
 };
 
 
@@ -25,7 +25,7 @@ pub struct Spider {
     pub body_data: [f32; 270],
     pub head_data: [f32; 270], // use body_colors
     pub speed: f32,
-    pub body_x_acc_rotation: f32,
+    pub body_x_acc_translation: f32,
     pub body_y_acc_rotation: f32,
     pub body_z_acc_rotation: f32, 
     pub frontal_legs: [Leg; 2], 
@@ -100,7 +100,7 @@ impl Spider {
                     BODY_HEIGHT / 2.1,
                     0.
                 ),
-                0
+                1
             ),
 
             // OTHER SIDE
@@ -121,7 +121,7 @@ impl Spider {
                     BODY_HEIGHT / 2.1,
                     BODY_DEPTH
                 ),
-                0
+                1
             ),
         ];
         
@@ -131,9 +131,9 @@ impl Spider {
         back_legs[0].start_moving(); 
         back_legs[1].start_moving();
         middle_legs[0].start_moving(); 
-        //middle_legs[1].start_moving(); 
-        // middle_legs[2].start_moving(); 
-        // middle_legs[3].start_moving(); 
+        middle_legs[1].start_moving(); 
+        middle_legs[2].start_moving(); 
+        middle_legs[3].start_moving(); 
 
         Self { 
             control: SpiderControl::new(&canvas), // CharControl
@@ -141,8 +141,8 @@ impl Spider {
             middle_legs,
             back_legs,       
             speed: 10., 
+            body_x_acc_translation: 0.,
             body_z_acc_rotation: 0.,
-            body_x_acc_rotation: 0.,
             body_y_acc_rotation: 0.,
             body_data: get_body_data(), // call it directly on the code
             body_colors: get_body_colors(), // call it directly on the code
@@ -153,15 +153,40 @@ impl Spider {
         }
     }
 
-    pub fn animate_body(&self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
+    pub fn animate_body(
+        &mut self, 
+        gpu_interface: &GpuInterface, 
+        body_model_matrix: &[f32; 16], 
+        positions_buffer: &WebGlBuffer, 
+        colors_buffer: &WebGlBuffer
+    ) -> [f32; 16] {
         gpu_interface.send_positions_to_gpu(&self.body_data, &positions_buffer);
         gpu_interface.send_colors_to_gpu(&self.body_colors, &colors_buffer);
+
+        let curr_direction = self.control.direction.borrow();
+        let x_acc_translation = self.body_x_acc_translation;
         
+        if let Move::Forward = *curr_direction {
+            self.body_x_acc_translation += 1.;  
+        } 
+
+        let updated_model_matrix = &m4::m4::M4::translate_3_d(
+            *body_model_matrix, 
+            m4::m4::M4::translation(
+                x_acc_translation, 
+                0., 
+                0.
+            )
+        );
+
         gpu_interface.consume_data(
             self.body_data.len() as i32 / 3, 
             Gl::TRIANGLES, 
-            &body_model_matrix
+            &updated_model_matrix
         );
+
+        *updated_model_matrix
+        
     }
 
     pub fn animate_front_legs(&mut self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
@@ -171,7 +196,7 @@ impl Spider {
                 &body_model_matrix, // reference
                 &self.control.direction.try_borrow().unwrap(),
                 i,
-                &mut self.animation_matrix_stack
+                //&mut self.animation_matrix_stack
             );
 
             for (j, model_matrix) in animation_model_matrices.iter().enumerate() {                
@@ -200,7 +225,7 @@ impl Spider {
                 &body_model_matrix,
                 &self.control.direction.try_borrow().unwrap(), 
                 i,
-                &mut self.animation_matrix_stack
+                //&mut self.animation_matrix_stack
             );
             
             for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
@@ -228,7 +253,7 @@ impl Spider {
                 &body_model_matrix,
                 &self.control.direction.try_borrow().unwrap(),
                 i,
-                &mut self.animation_matrix_stack
+                //&mut self.animation_matrix_stack
             );
             
             for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                

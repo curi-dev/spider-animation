@@ -124,6 +124,7 @@ impl SetupUiControl {
 
 }
 
+#[derive(PartialEq)]
 pub enum Move {
     Forward,
     Left,
@@ -134,28 +135,15 @@ pub enum Move {
 pub struct SpiderControl{
     pub is_active: bool,
     pub direction: Rc<RefCell<Move>>,
-    pub go_forward: Rc<RefCell<bool>>,    
-    pub go_back: Rc<RefCell<bool>>,    
-    pub turn_left: Rc<RefCell<bool>>,    
-    pub turn_right: Rc<RefCell<bool>>,    
+    
 }
 
 impl SpiderControl {
     pub fn new(canvas: &HtmlCanvasElement) -> Self {
-        let go_forward = Rc::new(RefCell::new(false));   
-        let go_forward_clone = go_forward.clone();
-
-        let go_back = Rc::new(RefCell::new(false));   
-        let go_back_clone = go_back.clone();
-
-        let turn_left = Rc::new(RefCell::new(false));   
-        let turn_left_clone = turn_left.clone();
-
-        let turn_right = Rc::new(RefCell::new(false));   
-        let turn_right_clone = turn_right.clone();
-
+    
         let direction = Rc::new(RefCell::new(Move::Static));   
-        let direction_clone = direction.clone();
+        let keyup_direction = direction.clone();
+        let keydown_direction = direction.clone();
     
         let keydown_closure = Closure::wrap(Box::new(move // move to events module (?)
             |event: web_sys::KeyboardEvent| {
@@ -164,69 +152,57 @@ impl SpiderControl {
             log(&format!("[KEY_CODE] {}", key_code));
                         
             // spider control
-            if key_code == 65 {
-                // turn left
-                *turn_left.borrow_mut() = true;
-                *direction.borrow_mut() = Move::Left;
+            if key_code == 65 {               
+                *keydown_direction.borrow_mut() = Move::Left;
             }
 
             if key_code == 68 {
-                // turn right
-                *turn_right.borrow_mut() = true;
-                *direction.borrow_mut() = Move::Right;
+                
+                *keydown_direction.borrow_mut() = Move::Right;
             }
 
-            if key_code == 87 {
-                // go forward
-                *go_forward.borrow_mut() = true;
-                *direction.borrow_mut() = Move::Forward;
+            if key_code == 87 {               
+                *keydown_direction.borrow_mut() = Move::Forward;
             }
 
             if key_code == 83 {
                 // go back
-                *go_back.borrow_mut() = true;
+                println!("go jump!");
             }
         }) as Box<dyn FnMut(_)>);
 
-        // let keyup_closure = Closure::wrap(Box::new(move // move to events module (?)
-        //     |event: web_sys::KeyboardEvent| {
+        let keyup_closure = Closure::wrap(Box::new(move // move to events module (?)
+            |event: web_sys::KeyboardEvent| {
 
-        //     let key_code = event.key_code();         
-        //     log(&format!("[KEY_CODE] {}", key_code));
+            let key_code = event.key_code();         
+            log(&format!("[KEY_CODE] {}", key_code));
                         
-        //     // spider control
-        //     if key_code == 65 {
-        //         // turn left
-        //         //*turn_left.borrow_mut() = false;
-        //     }
+            // spider control
+            if key_code == 65 {               
+                *keyup_direction.borrow_mut() = Move::Static;
+            }
 
-        //     if key_code == 68 {
-        //         // turn right
-        //         //*turn_right.borrow_mut() = false;
-        //     }
+            if key_code == 68 {               
+                *keyup_direction.borrow_mut() = Move::Static;
+            }
 
-        //     if key_code == 87 {
-        //         // go forward
-        //         //*go_forward.borrow_mut() = false;
-        //     }
+            if key_code == 87 {               
+                *keyup_direction.borrow_mut() = Move::Static;
+            }
 
-        //     if key_code == 83 {
-        //         // go back
-        //         //*go_back.borrow_mut() = false;
-        //     }
-        // }) as Box<dyn FnMut(_)>);
+            if key_code == 83 {
+                // go back
+                println!("go jump!");
+            }
+        }) as Box<dyn FnMut(_)>);
     
         canvas.add_event_listener_with_callback("keydown", keydown_closure.as_ref().unchecked_ref()).unwrap(); // ?
-        //canvas.add_event_listener_with_callback("keyup", keyup_closure.as_ref().unchecked_ref()).unwrap(); // ?
+        canvas.add_event_listener_with_callback("keyup", keyup_closure.as_ref().unchecked_ref()).unwrap(); // ?
         keydown_closure.forget();
-        //keyup_closure.forget();
+        keyup_closure.forget();
            
         Self {
-            direction: direction_clone,
-            go_forward: go_forward_clone,
-            go_back: go_back_clone,
-            turn_left: turn_left_clone,
-            turn_right: turn_right_clone,
+            direction,
             is_active: true,
         }
     }
