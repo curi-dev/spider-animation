@@ -88,42 +88,26 @@ impl GraphicsClient {
         resize_canvas_to_display_size(&self.gpu_interface.gl, &self.canvas);
         
         let aspect = (self.canvas.client_width() / self.canvas.client_height()) as f32;
-        //let aspect = ( self.canvas.client_height() / self.canvas.client_width() ) as f32;
 
-        let ui_rotation_x_body = self.ui_control.acc_x_rotation_body.try_borrow().unwrap();
-        let ui_rotation_y_body = self.ui_control.acc_y_rotation_body.try_borrow().unwrap();
-        let ui_translate_z_body = self.ui_control.acc_z_translation_body.try_borrow().unwrap();
+        // let ui_rotation_x_body = self.ui_control.acc_x_rotation_body.try_borrow().unwrap();
+        // let ui_rotation_y_body = self.ui_control.acc_y_rotation_body.try_borrow().unwrap();
+        // let ui_translate_z_body = self.ui_control.acc_z_translation_body.try_borrow().unwrap();
     
         // creating the model matrix for the body
-        let mut body_model_matrix = m4::perspective(
+        let perspective_mat = m4::perspective(
             deg_to_rad(DEFAULT_FIELD_OF_VIEW_IN_RADIANS),
             aspect,
             DEFAULT_Z_NEAR,
             DEFAULT_Z_FAR
         );
 
-        body_model_matrix = m4::translate_3_d(body_model_matrix, m4::translation(
-            INITIAL_BODY_DISPLACEMENT_X, 
-            INITIAL_BODY_DISPLACEMENT_Y,
+        let mut body_model_matrix = m4::translate_3_d(
+            perspective_mat, 
+            m4::translation(          
+            INITIAL_BODY_DISPLACEMENT_X,        
+            INITIAL_BODY_DISPLACEMENT_Y,       
             INITIAL_BODY_DISPLACEMENT_Z, 
         ));
-
-        // transformations coming from ui control - 3 transformations
-        body_model_matrix = m4::translate_3_d(body_model_matrix, m4::translation(
-            0., 
-            0., 
-            *ui_translate_z_body 
-        ));
-
-        body_model_matrix = m4::x_rotate_3_d( // is that better to put it inside animate() ?
-            body_model_matrix,
-            m4::x_rotation(deg_to_rad(*ui_rotation_x_body).into())
-        );
-
-        body_model_matrix = m4::y_rotate_3_d( // is that better to put it inside animate() ?
-            body_model_matrix,
-            m4::y_rotation(deg_to_rad(*ui_rotation_y_body).into())
-        );    
 
         // when using rust and webgl together, rust is used for data manipulation and
         // calculation, while webgl is used for rendering and displaying the data on the
@@ -132,33 +116,17 @@ impl GraphicsClient {
         let positions_buffer = self.gpu_interface.gl.create_buffer().unwrap();  
         let colors_buffer = self.gpu_interface.gl.create_buffer().unwrap(); 
         
-        
+
         // returns the new translated body model matrix
-        let body_model_matrix = self.spider.animate_body(
-            &self.gpu_interface, 
-            &body_model_matrix, 
+        // ui_translate_z_body: f32,
+        // ui_rotation_x_body: f32,
+        // ui_rotation_y_body: f32,
+        body_model_matrix = self.spider.animate_body(
+            &body_model_matrix,
+            &self.gpu_interface,  
             &positions_buffer, 
-            &colors_buffer
+            &colors_buffer,
         );
-
-        // head below
-        self.gpu_interface.send_positions_to_gpu(&self.spider.head_data, &positions_buffer);
-        self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
-        
-        let head_model_matrix = m4::translate_3_d(
-            body_model_matrix, 
-            m4::translation(
-            BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 
-            3., 
-            BODY_DEPTH / 2. - HEAD_DEPTH / 2. 
-        ));
-
-        self.gpu_interface.consume_data(
-            self.spider.head_data.len() as i32 / 3, 
-            Gl::TRIANGLES, 
-            &head_model_matrix
-        );
-        // head above  
 
         self.spider.animate_front_legs(
             &self.gpu_interface, 
@@ -180,6 +148,25 @@ impl GraphicsClient {
             &positions_buffer, 
             &colors_buffer
         );
+
+        // // head below
+        self.gpu_interface.send_positions_to_gpu(&self.spider.head_data, &positions_buffer);
+        self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
+        
+        let head_model_matrix = m4::translate_3_d(
+            body_model_matrix, 
+            m4::translation(
+            BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 
+            3., 
+            BODY_DEPTH / 2. - HEAD_DEPTH / 2. 
+        ));
+
+        self.gpu_interface.consume_data(
+            self.spider.head_data.len() as i32 / 3, 
+            Gl::TRIANGLES, 
+            &head_model_matrix
+        );
+        // head above  
     
     }
 }

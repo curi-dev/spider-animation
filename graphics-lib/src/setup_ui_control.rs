@@ -129,8 +129,12 @@ pub enum Move {
     Forward,
     Left,
     Right,
-    Jump,
-    Static
+    SpinUp,
+    SpinDown,
+    Static,
+    ZoomOut,
+    ZoomIn,
+    Jump
 }
 pub struct SpiderControl{
     pub is_active: bool,
@@ -156,8 +160,7 @@ impl SpiderControl {
                 *keydown_direction.borrow_mut() = Move::Left;
             }
 
-            if key_code == 68 {
-                
+            if key_code == 68 {               
                 *keydown_direction.borrow_mut() = Move::Right;
             }
 
@@ -166,8 +169,19 @@ impl SpiderControl {
             }
 
             if key_code == 83 {
-                // go back
-                println!("go jump!");
+                *keydown_direction.borrow_mut() = Move::SpinUp;
+            }
+
+            if key_code == 88 {
+                *keydown_direction.borrow_mut() = Move::SpinDown;
+            }
+
+            if key_code == 32 {
+                *keydown_direction.borrow_mut() = Move::ZoomIn;
+            }
+
+            if key_code == 13 {
+                *keydown_direction.borrow_mut() = Move::ZoomOut;
             }
         }) as Box<dyn FnMut(_)>);
 
@@ -177,7 +191,7 @@ impl SpiderControl {
             let key_code = event.key_code();         
             log(&format!("[KEY_CODE] {}", key_code));
                         
-            // spider control
+            // spider control -> improve this code
             if key_code == 65 {               
                 *keyup_direction.borrow_mut() = Move::Static;
             }
@@ -191,8 +205,19 @@ impl SpiderControl {
             }
 
             if key_code == 83 {
-                // go back
-                println!("go jump!");
+                *keyup_direction.borrow_mut() = Move::Static;
+            }
+
+            if key_code == 88 {
+                *keyup_direction.borrow_mut() = Move::Static;
+            }
+
+            if key_code == 32 {
+                *keyup_direction.borrow_mut() = Move::Static;
+            }
+
+            if key_code == 13 {
+                *keyup_direction.borrow_mut() = Move::Static;
             }
         }) as Box<dyn FnMut(_)>);
     

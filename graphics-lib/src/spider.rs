@@ -1,5 +1,5 @@
+use nalgebra::Matrix4;
 use web_sys::{HtmlCanvasElement, WebGlBuffer, WebGlRenderingContext as Gl};
-
 use crate::{
     data_structures::{
         get_colors,  
@@ -7,7 +7,12 @@ use crate::{
         get_body_colors, 
         get_body_data, get_head_data
     }, 
-    constants::*, setup_ui_control::{SpiderControl, Move}, leg::Leg, gpu_interface::GpuInterface, matrix_stack::MatrixStack, log, modules::m4
+    constants::*, 
+    setup_ui_control::{SpiderControl, Move}, 
+    leg::Leg, 
+    gpu_interface::GpuInterface, 
+    matrix_stack::MatrixStack, 
+    modules::m4::m4::M4 as m4, webgl_utils::deg_to_rad, log
 };
 
 
@@ -26,13 +31,14 @@ pub struct Spider {
     pub head_data: [f32; 270], // use body_colors
     pub speed: f32,
     pub body_x_acc_translation: f32,
-    pub body_y_acc_rotation: f32,
-    pub body_z_acc_rotation: f32, 
+    pub body_z_acc_translation: f32,
+    pub body_x_acc_rotation: f32,
+    pub body_y_acc_rotation: f32, 
     pub frontal_legs: [Leg; 2], 
     pub back_legs: [Leg; 2],
     pub middle_legs: [Leg; 4],
     control: SpiderControl,
-    pub animation_matrix_stack: MatrixStack
+    pub last_pos_model_mat: Option<[f32; 16]>
 }
 
 impl Spider {
@@ -142,51 +148,101 @@ impl Spider {
             back_legs,       
             speed: 10., 
             body_x_acc_translation: 0.,
-            body_z_acc_rotation: 0.,
+            body_z_acc_translation: 0.,
+            body_x_acc_rotation: 0.,
             body_y_acc_rotation: 0.,
             body_data: get_body_data(), // call it directly on the code
             body_colors: get_body_colors(), // call it directly on the code
             head_data: get_head_data(),
             colors: get_colors(), // call it directly on the code
             base_leg_colors: get_base_leg_colors(),
-            animation_matrix_stack: MatrixStack { stack: Vec::new() },
+            last_pos_model_mat: None,
         }
     }
 
     pub fn animate_body(
-        &mut self, 
+        &mut self,
+        pre_matrix: &[f32; 16], 
         gpu_interface: &GpuInterface, 
-        body_model_matrix: &[f32; 16], 
         positions_buffer: &WebGlBuffer, 
-        colors_buffer: &WebGlBuffer
+        colors_buffer: &WebGlBuffer,
     ) -> [f32; 16] {
+        
         gpu_interface.send_positions_to_gpu(&self.body_data, &positions_buffer);
         gpu_interface.send_colors_to_gpu(&self.body_colors, &colors_buffer);
 
-        let curr_direction = self.control.direction.borrow();
-        let x_acc_translation = self.body_x_acc_translation;
-        
-        if let Move::Forward = *curr_direction {
-            self.body_x_acc_translation += 1.;  
-        } 
+        let mut x_acc_translation = 0.;
+        let mut y_acc_rotation = 0.;
+        let mut x_acc_rotation = 0.;
+        let mut z_acc_translation = 0.;
+        if let Move::Forward = *self.control.direction.borrow() {
+            self.body_x_acc_translation += 1.; // body default translation
+            x_acc_translation = 1.;
+        }
 
-        let updated_model_matrix = &m4::m4::M4::translate_3_d(
-            *body_model_matrix, 
-            m4::m4::M4::translation(
+        if let Move::Left = *self.control.direction.borrow() {
+            self.body_y_acc_rotation += 0.1; // body default rotation
+            y_acc_rotation = 0.1;
+        }
+
+        if let Move::Right = *self.control.direction.borrow() {         
+            self.body_y_acc_rotation -= 0.1; // body default rotation
+            y_acc_rotation = -0.1;
+        }
+
+        if let Move::SpinDown = *self.control.direction.borrow() {
+            self.body_x_acc_rotation += 0.1;
+            x_acc_rotation = 0.1;
+        }
+
+        if let Move::SpinUp = *self.control.direction.borrow() {
+            self.body_x_acc_rotation -= 0.1;
+            x_acc_rotation = -0.1;
+        }
+
+        if let Move::ZoomIn = *self.control.direction.borrow() {
+            self.body_z_acc_translation += 1.;
+            z_acc_translation = 1.;
+        }
+
+        if let Move::ZoomOut = *self.control.direction.borrow() {
+            self.body_z_acc_translation -= 1.;
+            z_acc_translation = -1.;
+        }
+
+        let rotation_model_mat = m4::multiply_mat(
+            self.last_pos_model_mat.unwrap_or(m4::identity()), 
+            m4::y_rotation( y_acc_rotation )
+        );
+
+        let rotation_model_mat = m4::multiply_mat(
+            rotation_model_mat, 
+            m4::x_rotation( x_acc_rotation )
+        );
+
+        let transformation_model_mat = m4::multiply_mat(
+            rotation_model_mat, 
+            m4::translation(
                 x_acc_translation, 
                 0., 
-                0.
+                z_acc_translation
             )
+        );
+
+        let final_mat = m4::multiply_mat(
+            *pre_matrix, 
+            transformation_model_mat
         );
 
         gpu_interface.consume_data(
             self.body_data.len() as i32 / 3, 
-            Gl::TRIANGLES, 
-            &updated_model_matrix
+            Gl::TRIANGLES,
+            &final_mat
         );
-
-        *updated_model_matrix
         
+        self.last_pos_model_mat = Option::Some(transformation_model_mat);
+
+        final_mat
     }
 
     pub fn animate_front_legs(&mut self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
@@ -273,6 +329,8 @@ impl Spider {
             }            
         }
     } 
+
+    
 }
 
 

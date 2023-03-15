@@ -1,3 +1,5 @@
+use crate::log;
+
 
 pub struct M4 {}
 
@@ -27,26 +29,23 @@ impl M4 {
         perspective_mat
     }
 
-    // pub fn perspective(field_of_view_in_radians: f32, aspect: f32, near: f32, far: f32) -> [f32; 16] {
-    //     let f = ((3.14 * 0.5 - 0.5 * field_of_view_in_radians) as f64).tan();
-    //     let range_inv = 1. / (near - far);
-
-    //     let perspective_mat = [
-    //         f as f32, 0., 0., 0.,
-    //         0., f as f32, 0., 0.,
-    //         0., 0., (near + far) * range_inv, -1.,
-    //         0., 0., near * far * range_inv * 2., 0. 
-    //     ];
-
-    //     perspective_mat
-    // }
-
     pub fn identity() -> [f32; 16] {        
         let identity_mat = [
             1., 0., 0., 0.,
             0., 1., 0., 0.,
             0., 0., 1., 0.,
             0., 0., 0., 1. 
+        ];
+
+        identity_mat
+    }
+
+    pub fn identity_double_x() -> [f32; 16] {        
+        let identity_mat = [
+            1., 0., 0., 0.,
+            0., 1., 0., 0.,
+            0., 0., 1., 0.,
+            1., 0., 0., 1. 
         ];
 
         identity_mat
@@ -136,7 +135,66 @@ impl M4 {
         z_rotation_mat
     }
 
+    pub fn inverse(matrix: &[f32; 16]) -> Option<[f32; 16]> {
+        // Convert the input array into a 2D array for easier manipulation
+        let mut mat = [[0.0; 4]; 4];
+        for i in 0..4 {
+            for j in 0..4 {
+                mat[i][j] = matrix[i * 4 + j];
+            }
+        }
+    
+        // Calculate the determinant of the matrix
+        let det = mat[0][0] * (mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1])
+                - mat[0][1] * (mat[1][0] * mat[2][2] - mat[1][2] * mat[2][0])
+                + mat[0][2] * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]);
+    
+        // If the determinant is zero, the matrix is singular and has no inverse
+        if det.abs() < 1e-6 {
+            return None;
+        }
+    
+        // Calculate the adjugate of the matrix
+        let adj = [
+            [
+                mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1],
+                mat[0][2] * mat[2][1] - mat[0][1] * mat[2][2],
+                mat[0][1] * mat[1][2] - mat[0][2] * mat[1][1],
+                0.0,
+            ],
+            [
+                mat[1][2] * mat[2][0] - mat[1][0] * mat[2][2],
+                mat[0][0] * mat[2][2] - mat[0][2] * mat[2][0],
+                mat[0][2] * mat[1][0] - mat[0][0] * mat[1][2],
+                0.0,
+            ],
+            [
+                mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0],
+                mat[0][1] * mat[2][0] - mat[0][0] * mat[2][1],
+                mat[0][0] * mat[1][1] - mat[0][1] * mat[1][0],
+                0.0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+            ],
+        ];
+    
+        // Calculate the inverse of the matrix by dividing the adjugate by the determinant
+        let mut inv = [0.0; 16];
+        for i in 0..4 {
+            for j in 0..4 {
+                inv[i * 4 + j] = adj[i][j] / det;
+            }
+        }
+    
+        Some(inv)
+    }
+
     pub fn multiply_mat(mat_a: [f32; 16], mat_b: [f32; 16]) -> [f32; 16] {
+        log(&format!("multiply_mat INSIDE: {:?} ", mat_a));
         let b00 = mat_b[0 * 4 + 0];
         let b01 = mat_b[0 * 4 + 1];
         let b02 = mat_b[0 * 4 + 2];

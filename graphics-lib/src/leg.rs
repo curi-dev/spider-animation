@@ -1,6 +1,4 @@
 use std::ops::Range;
-
-
 use crate::{spider::LegType, data_structures::*, modules::m4::m4::M4 as m4, constants::*, webgl_utils::deg_to_rad, setup_ui_control::{SpiderControl, Move}, matrix_stack::MatrixStack, log};
 
 
@@ -137,6 +135,18 @@ impl Leg {
                             Move::Static => {
                                 println!("no move!");
                             },
+                            Move::SpinDown => {
+                                println!("move spindown!");
+                            },
+                            Move::SpinUp => {
+                                println!("move spinup");
+                            },
+                            Move::ZoomOut => {
+                                println!("move zoomout")
+                            },
+                            Move::ZoomIn => {
+                                println!("move zoomin")
+                            },
                         }
     
                         ////////// animations below
@@ -212,6 +222,18 @@ impl Leg {
                                 Move::Static => {
                                     println!("no move!");
                                 },
+                                Move::SpinDown => {
+                                    println!("move spindown!");
+                                },
+                                Move::SpinUp => {
+                                    println!("move spinup");
+                                },
+                                Move::ZoomOut => {
+                                    println!("move zoomout")
+                                },
+                                Move::ZoomIn => {
+                                    println!("move zoomin")
+                                },
                             }
                             
                             ////////// animations below
@@ -271,6 +293,18 @@ impl Leg {
                                 },
                                 Move::Static => {
                                     println!("no move!");
+                                },
+                                Move::SpinDown => {
+                                    println!("move spindown!");
+                                },
+                                Move::SpinUp => {
+                                    println!("move spinup");
+                                },
+                                Move::ZoomOut => {
+                                    println!("move zoomout")
+                                },
+                                Move::ZoomIn => {
+                                    println!("move zoomin")
                                 },
                             }
 
@@ -350,6 +384,18 @@ impl Leg {
                             Move::Static => {
                                 println!("no move!");
                             },
+                            Move::SpinDown => {
+                                println!("move spindown!");
+                            },
+                            Move::SpinUp => {
+                                println!("move spinup");
+                            },
+                            Move::ZoomOut => {
+                                println!("move zoomout")
+                            },
+                            Move::ZoomIn => {
+                                println!("move zoomin")
+                            },
                         }
     
                         ////////// animations below
@@ -427,6 +473,18 @@ impl Leg {
                                 Move::Static => {
                                     println!("no move!");
                                 },
+                                Move::SpinDown => {
+                                    println!("move spindown!");
+                                },
+                                Move::SpinUp => {
+                                    println!("move spinup");
+                                },
+                                Move::ZoomOut => {
+                                    println!("move zoomout")
+                                },
+                                Move::ZoomIn => {
+                                    println!("move zoomin")
+                                },
                             }
                             
                             ////////// animations below
@@ -474,6 +532,18 @@ impl Leg {
                                 },
                                 Move::Static => {
                                     println!("no move!");
+                                },
+                                Move::SpinDown => {
+                                    println!("move spindown!");
+                                },
+                                Move::SpinUp => {
+                                    println!("move spinup");
+                                },
+                                Move::ZoomOut => {
+                                    println!("move zoomout")
+                                },
+                                Move::ZoomIn => {
+                                    println!("move zoomin")
                                 },
                             }
 
@@ -543,6 +613,18 @@ impl Leg {
                             },
                             Move::Static => {
                                 println!("no move!");
+                            },
+                            Move::SpinDown => {
+                                println!("move spindown!");
+                            },
+                            Move::SpinUp => {
+                                println!("move spinup");
+                            },
+                            Move::ZoomOut => {
+                                println!("move zoomout")
+                            },
+                            Move::ZoomIn => {
+                                println!("move zoomin")
                             },
                         }
     
@@ -614,6 +696,18 @@ impl Leg {
                                 Move::Static => {
                                     println!("no move!");
                                 },
+                                Move::SpinDown => {
+                                    println!("move spindown!");
+                                },
+                                Move::SpinUp => {
+                                    println!("move spinup");
+                                },
+                                Move::ZoomOut => {
+                                    println!("move zoomout")
+                                },
+                                Move::ZoomIn => {
+                                    println!("move zoomin")
+                                },
                             }
                             
                             ////////// animations below
@@ -640,6 +734,18 @@ impl Leg {
                                 },
                                 Move::Static => {
                                     println!("no move!");
+                                },
+                                Move::SpinDown => {
+                                    println!("move spindown!");
+                                },
+                                Move::SpinUp => {
+                                    println!("move spinup");
+                                },
+                                Move::ZoomOut => {
+                                    println!("move zoomout")
+                                },
+                                Move::ZoomIn => {
+                                    println!("move zoomin")
                                 },
                             }
 
@@ -792,20 +898,7 @@ impl Leg {
                     m4::z_rotation( deg_to_rad( 55. ).into() ) 
                 );
 
-                // if leg_i == 0 {
-                //     upper_leg_model_matrix = m4::y_rotate_3_d(
-                //         upper_leg_model_matrix, 
-                //         m4::y_rotation( deg_to_rad( -7. ).into() ) // 180 invert + 55 up
-                //     );
-                // }
-
-                // if leg_i == 1 {
-                //     upper_leg_model_matrix = m4::y_rotate_3_d(
-                //         upper_leg_model_matrix, 
-                //         m4::y_rotation( deg_to_rad( 7. ).into() ) // 180 invert + 55 up
-                //     );
-                // }
-
+            
                 upper_leg_model_matrix = m4::translate_3_d( 
                     upper_leg_model_matrix, 
                     m4::translation( 
@@ -833,25 +926,10 @@ impl Leg {
                     m4::z_rotation( deg_to_rad( 55.).into() ) 
                 );
 
-                // if leg_i == 2 {
-                //     upper_leg_model_matrix = m4::y_rotate_3_d(
-                //         upper_leg_model_matrix, 
-                //         m4::y_rotation( deg_to_rad( 7. ).into() ) // 180 invert + 55 up
-                //     );
-                // }
-
-                // if leg_i == 3 {
-                //     upper_leg_model_matrix = m4::y_rotate_3_d(
-                //         upper_leg_model_matrix, 
-                //         m4::y_rotation( deg_to_rad( -7. ).into() ) // 180 invert + 55 up
-                //     );
-                // }
-
                 upper_leg_model_matrix = m4::translate_3_d( 
                     upper_leg_model_matrix, 
                     m4::translation( 
                         - MIDDLE_UPPER_LEG_WIDTH + 2., 
-                        //MIDDLE_UPPER_LEG_BIG_HEIGHT - MIDDLE_UPPER_LEG_SMALL_HEIGHT,
                         0.,
                         (MIDDLE_UPPER_LEG_DEPTH / 2.) * -1.
                     )
