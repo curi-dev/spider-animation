@@ -104,10 +104,15 @@ impl GraphicsClient {
         let mut body_model_matrix = m4::translate_3_d(
             perspective_mat, 
             m4::translation(          
-            INITIAL_BODY_DISPLACEMENT_X,        
-            INITIAL_BODY_DISPLACEMENT_Y,       
-            INITIAL_BODY_DISPLACEMENT_Z, 
+            INITIAL_BODY_DISPLACEMENT_X + BODY_WIDTH / 2.,        
+            INITIAL_BODY_DISPLACEMENT_Y + BODY_HEIGHT / 2.,       
+            INITIAL_BODY_DISPLACEMENT_Z + BODY_DEPTH / 2., 
         ));
+
+        body_model_matrix = m4::y_rotate_3_d(
+            body_model_matrix, 
+            m4::y_rotation( deg_to_rad( -90. ).into() )
+        );
 
         // when using rust and webgl together, rust is used for data manipulation and
         // calculation, while webgl is used for rendering and displaying the data on the

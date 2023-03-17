@@ -181,13 +181,13 @@ impl Spider {
         }
 
         if let Move::Left = *self.control.direction.borrow() {
-            self.body_y_acc_rotation += 0.1; // body default rotation
-            y_acc_rotation = 0.1;
+            // self.body_y_acc_rotation += 0.1; // body default rotation
+            // y_acc_rotation = 0.1;
         }
 
         if let Move::Right = *self.control.direction.borrow() {         
-            self.body_y_acc_rotation -= 0.1; // body default rotation
-            y_acc_rotation = -0.1;
+            // self.body_y_acc_rotation -= 1.; // body default rotation
+            //y_acc_rotation = -1.;
         }
 
         if let Move::SpinDown = *self.control.direction.borrow() {
@@ -212,12 +212,12 @@ impl Spider {
 
         let rotation_model_mat = m4::multiply_mat(
             self.last_pos_model_mat.unwrap_or(m4::identity()), 
-            m4::y_rotation( y_acc_rotation )
+            m4::y_rotation( deg_to_rad( y_acc_rotation ).into() )
         );
 
         let rotation_model_mat = m4::multiply_mat(
             rotation_model_mat, 
-            m4::x_rotation( x_acc_rotation )
+            m4::z_rotation( x_acc_rotation )
         );
 
         let transformation_model_mat = m4::multiply_mat(

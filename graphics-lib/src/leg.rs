@@ -3,19 +3,33 @@ use crate::{spider::LegType, data_structures::*, modules::m4::m4::M4 as m4, cons
 
 
 pub struct Leg {
+    pub vertex_data: Vec<Vec<f32>>,
+    pub body_clamp_point: (f32, f32, f32),
     pub position: LegType,
+    pub upper_last_pos_model_mat: Option<[f32; 16]>,
+    
+    pub is_moving: bool,
+    move_cycle: u8,
+    upper_side_z_move_cycle: u8,
+    upper_side_y_move_cycle: u8,
+    
+    pub upper_side_z_move_range: Range<f32>,
+    pub upper_side_y_move_range: Range<f32>,
+    
     pub upper_move_range: Range<f32>,
     pub joint_move_range: Range<f32>,
     pub base_move_range: Range<f32>,
-    pub vertex_data: Vec<Vec<f32>>,
-    pub upper_z_acc_rotation: f32,
-    pub joint_z_acc_rotation: f32,
-    pub base_z_acc_rotation: f32,
-    pub upper_y_acc_rotation: f32,
+
     pub upper_x_acc_rotation: f32,
-    pub body_clamp_point: (f32, f32, f32),
-    move_cycle: u8,
-    pub is_moving: bool
+    pub upper_y_acc_rotation: f32,
+    pub upper_z_acc_rotation: f32,
+    
+    pub joint_x_acc_rotation: f32,
+    pub joint_y_acc_rotation: f32,
+    pub joint_z_acc_rotation: f32,
+    
+    pub base_x_acc_rotation: f32,
+    pub base_z_acc_rotation: f32,
 }
 
 impl Leg {
@@ -35,18 +49,33 @@ impl Leg {
     
         Self {
             vertex_data,
-            body_clamp_point, 
+            body_clamp_point,
+            position: leg_position,
+            upper_last_pos_model_mat: None,
+            
+            is_moving: false,
+            move_cycle, // 0 or 1
+            upper_side_z_move_cycle: 0, // 0 or 1
+            upper_side_y_move_cycle: 0, // 0 or 1
+            
+            upper_side_z_move_range: Range { start: 0., end: 7.5 }, // alter range after half cycle complete
+            upper_side_y_move_range: Range { start: -15., end: 15. },
+            upper_x_acc_rotation: 0.,
+            upper_y_acc_rotation: 0., 
+            upper_z_acc_rotation: 0.,
+            //upper_z_acc_rotation: -5.,
+
             upper_move_range,
             joint_move_range: Range { start: 0., end: 17. },
             base_move_range: Range { start: 0., end: 11. },
-            position: leg_position,
-            upper_z_acc_rotation: -5.,
+            
+            
+            joint_x_acc_rotation: 0.,
             joint_z_acc_rotation: 0.,
+            joint_y_acc_rotation: 0.,
+            
+            base_x_acc_rotation: 0.,
             base_z_acc_rotation: 0.,
-            upper_y_acc_rotation: 0., // range / 2.
-            upper_x_acc_rotation: 0.,
-            move_cycle,
-            is_moving: false,
         }
     }
 
@@ -56,6 +85,22 @@ impl Leg {
 
     pub fn start_moving(&mut self) {
         self.is_moving = true;
+    }
+
+    pub fn switch_upper_side_z_move_cycle(&mut self) {
+        if self.upper_side_z_move_cycle == 0 {
+            self.upper_side_z_move_cycle = 1;
+        } else {
+            self.upper_side_z_move_cycle = 0;
+        }
+    }
+
+    pub fn switch_upper_side_y_move_cycle(&mut self) {
+        if self.upper_side_y_move_cycle == 0 {
+            self.upper_side_y_move_cycle = 1;
+        } else {
+            self.upper_side_y_move_cycle = 0;
+        }
     }
 
     pub fn switch_move_cycle(&mut self) {
@@ -71,7 +116,6 @@ impl Leg {
         pre_matrix: &[f32; 16], 
         direction: &Move, 
         leg_i: usize,
-        //animation_matrix_stack_two: &mut MatrixStack // what is that for?
     ) -> [Option<[f32; 16]>; 3] {
 
         //let mut animation_model_matrices = Vec::new();
@@ -124,10 +168,74 @@ impl Leg {
                                 }                     
                             },
                             Move::Left => {
-                                println!("move left!");
+                                      
+                                let mut rotation_z: f32 = 0.;
+                                let rotation_y: f32;
+
+                                if self.upper_side_y_move_cycle == 0 {
+                                    rotation_y = 1.;
+
+                                    if self.upper_side_z_move_cycle == 0 {
+                                        rotation_z = 1.;
+                                    } else {
+                                        rotation_z = -1.;
+                                    }
+                                } else {
+                                    rotation_y = -1.;
+                                }
+                                
+                                self.upper_z_acc_rotation += rotation_z; // same values?
+                                self.upper_y_acc_rotation += rotation_y; // same values? 
+     
+                                if !self.upper_side_z_move_range.contains( &( self.upper_z_acc_rotation as f32 ) ) {
+                                    if self.upper_side_z_move_range.end == 15. {
+                                        self.switch_upper_side_z_move_cycle();
+                                    }
+                                }
+                                
+                                if !self.upper_side_y_move_range.contains( &( self.upper_y_acc_rotation as f32 ) ) {
+                                    self.switch_upper_side_y_move_cycle();
+                                    
+                                    if self.upper_side_z_move_range.end == 7.5 {
+                                        self.switch_upper_side_z_move_cycle();
+                                        self.upper_side_z_move_range.end = 15.; // turn it into a full cycle
+                                    }
+                                }                   
                             },
                             Move::Right => {
-                                println!("move right!");
+                                      
+                                let mut rotation_z: f32 = 0.;
+                                let rotation_y: f32;
+
+                                if self.upper_side_y_move_cycle == 0 {
+                                    rotation_y = -1.;
+
+                                    if self.upper_side_z_move_cycle == 0 {
+                                        rotation_z = 1.;
+                                    } else {
+                                        rotation_z = -1.;
+                                    }
+                                } else {
+                                    rotation_y = 1.;
+                                }
+                                
+                                self.upper_z_acc_rotation += rotation_z; // same values?
+                                self.upper_y_acc_rotation += rotation_y; // same values? 
+     
+                                if !self.upper_side_z_move_range.contains( &( self.upper_z_acc_rotation as f32 ) ) {
+                                    if self.upper_side_z_move_range.end == 15. {
+                                        self.switch_upper_side_z_move_cycle();
+                                    }
+                                }
+                                
+                                if !self.upper_side_y_move_range.contains( &( self.upper_y_acc_rotation as f32 ) ) {
+                                    self.switch_upper_side_y_move_cycle();
+                                    
+                                    if self.upper_side_z_move_range.end == 7.5 {
+                                        self.switch_upper_side_z_move_cycle();
+                                        self.upper_side_z_move_range.end = 15.; // turn it into a full cycle
+                                    }
+                                }                  
                             },
                             Move::Jump => {
                                 println!("move jump!");
@@ -151,19 +259,25 @@ impl Leg {
     
                         ////////// animations below
                         let mut updated_model_matrix = m4::translate_3_d( // here is the pivot point
-                            original_transformation, 
+                            original_transformation,
+                            //self.upper_last_pos_model_mat.unwrap_or(original_transformation), 
                             m4::translation( 
                                 FRONTAL_UPPER_LEG_WIDTH, 
                                 FRONTAL_UPPER_LEG_BIG_HEIGHT / 2.,
                                 FRONTAL_UPPER_LEG_DEPTH / 2.
                             )
                         );
-        
+                        
+                        updated_model_matrix = m4::y_rotate_3_d(
+                            updated_model_matrix, 
+                            m4::y_rotation( deg_to_rad( self.upper_y_acc_rotation ).into() ) 
+                        );
+
                         updated_model_matrix = m4::z_rotate_3_d(
                             updated_model_matrix, 
                             m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation ).into() ) 
-                        );
-        
+                        );   
+
                         updated_model_matrix = m4::translate_3_d( // here is the pivot point
                             updated_model_matrix, 
                             m4::translation( 
@@ -171,9 +285,11 @@ impl Leg {
                                 (FRONTAL_UPPER_LEG_BIG_HEIGHT / 2.) * -1.,
                                 (FRONTAL_UPPER_LEG_DEPTH / 2.) * -1.
                             )
-                        );   
+                        );
+
                         ////////// animations above
-                     
+                        
+                        self.upper_last_pos_model_mat = Some(updated_model_matrix);
                         animation_models[0] = Some(updated_model_matrix); 
                         animation_matrix_stack.push(updated_model_matrix); 
                     }
@@ -208,13 +324,41 @@ impl Leg {
                                     
                                     self.joint_z_acc_rotation += displacement; 
 
-                                    log(&format!("updated z acc rotation: {:?} ", self.joint_z_acc_rotation));         
+                                    
                                 },
                                 Move::Left => {
-                                    println!("move left!");
+                                    let rotation_x: f32;
+                                    let rotation_y: f32;
+                                    let rotation_z: f32;
+
+                                    if self.upper_side_y_move_cycle == 0 {
+                                        rotation_x = 0.75;
+                                        rotation_y = -0.5;
+                                    } else {
+                                        rotation_x = -0.75;
+                                        rotation_y = 0.5;
+                                    }
+                                
+                                    self.joint_x_acc_rotation += rotation_x; // same values?
+                                    self.joint_y_acc_rotation += rotation_y; // same values? 
+                                    self.joint_z_acc_rotation = self.upper_z_acc_rotation; // same values?              
                                 },
                                 Move::Right => {
-                                    println!("move right!");
+                                    let rotation_x: f32;
+                                    let rotation_y: f32;
+                                    let rotation_z: f32;
+                                    
+                                    if self.upper_side_y_move_cycle == 0 {
+                                        rotation_x = 0.75;
+                                        rotation_y = -0.5;
+                                    } else {
+                                        rotation_x = -0.75;
+                                        rotation_y = 0.5
+                                    }
+                                    
+                                    self.joint_x_acc_rotation += rotation_x; // same values?
+                                    self.joint_y_acc_rotation += rotation_y; // same values?   
+                                    self.joint_z_acc_rotation = self.upper_z_acc_rotation; // same values?   
                                 },
                                 Move::Jump => {
                                     println!("move jump!");
@@ -245,7 +389,19 @@ impl Leg {
                                     FRONTAL_JOINT_LEG_DEPTH / 2.
                                 )
                             );
-            
+
+                            // BELOW - its only for lateral animations
+                            updated_model_matrix = m4::x_rotate_3_d(
+                                updated_model_matrix, 
+                                m4::x_rotation( deg_to_rad( self.joint_x_acc_rotation ).into() ) 
+                            );
+
+                            updated_model_matrix = m4::y_rotate_3_d(
+                                updated_model_matrix, 
+                                m4::y_rotation( deg_to_rad( self.joint_y_acc_rotation * -1. ).into() ) 
+                            );
+                            // ABOVE - its only for lateral animations
+
                             updated_model_matrix = m4::z_rotate_3_d(
                                 updated_model_matrix, 
                                 m4::z_rotation( deg_to_rad( self.joint_z_acc_rotation * -1. ).into() ) 
@@ -283,10 +439,24 @@ impl Leg {
                                          
                                 },
                                 Move::Left => {
-                                    println!("move left!");
+                                    let rotation_x: f32;    
+                                    if self.upper_side_z_move_cycle == 0 {
+                                        rotation_x = -1.;
+                                    } else {
+                                        rotation_x = 1.;
+                                    }
+                                    
+                                    self.base_x_acc_rotation += rotation_x;              
                                 },
                                 Move::Right => {
-                                    println!("move right!");
+                                    let rotation_x: f32;    
+                                    if self.upper_side_z_move_cycle == 0 {
+                                        rotation_x = 1.;
+                                    } else {
+                                        rotation_x = -1.;
+                                    }
+                                    
+                                    self.base_x_acc_rotation += rotation_x;  
                                 },
                                 Move::Jump => {
                                     println!("move jump!");
@@ -310,10 +480,18 @@ impl Leg {
 
                             ////////// animations below
                                   
-                            let updated_model_matrix = m4::z_rotate_3_d(
+                            let mut updated_model_matrix = m4::z_rotate_3_d(
                                 original_transformation, 
                                 m4::z_rotation( deg_to_rad( self.base_z_acc_rotation ).into() ) 
                             );
+
+                            // BELOW - its only for lateral animations
+                            updated_model_matrix = m4::x_rotate_3_d(
+                                updated_model_matrix, 
+                                m4::x_rotation( deg_to_rad( self.base_x_acc_rotation ).into() ) 
+                            );
+
+                            // ABOVE - its only for lateral animations
         
                             ////////// animations above
                                                       
