@@ -58,8 +58,8 @@ impl Leg {
             upper_side_z_move_cycle: 0, // 0 or 1
             upper_side_y_move_cycle: 0, // 0 or 1
             
-            upper_side_z_move_range: Range { start: 0., end: 7.5 }, // alter range after half cycle complete
-            upper_side_y_move_range: Range { start: -15., end: 15. },
+            upper_side_z_move_range: Range { start: 0., end: 7. }, // alter range after half cycle complete
+            upper_side_y_move_range: Range { start: -14., end: 14. },
             upper_x_acc_rotation: 0.,
             upper_y_acc_rotation: 0., 
             upper_z_acc_rotation: 0.,
@@ -167,74 +167,35 @@ impl Leg {
                                     self.switch_move_cycle();
                                 }                     
                             },
-                            Move::Left => {
-                                      
-                                let mut rotation_z: f32 = 0.;
+                            Move::Left => {                                       
                                 let rotation_y: f32;
 
                                 if self.upper_side_y_move_cycle == 0 {
                                     rotation_y = 1.;
-
-                                    if self.upper_side_z_move_cycle == 0 {
-                                        rotation_z = 1.;
-                                    } else {
-                                        rotation_z = -1.;
-                                    }
                                 } else {
                                     rotation_y = -1.;
                                 }
                                 
-                                self.upper_z_acc_rotation += rotation_z; // same values?
                                 self.upper_y_acc_rotation += rotation_y; // same values? 
      
-                                if !self.upper_side_z_move_range.contains( &( self.upper_z_acc_rotation as f32 ) ) {
-                                    if self.upper_side_z_move_range.end == 15. {
-                                        self.switch_upper_side_z_move_cycle();
-                                    }
-                                }
-                                
                                 if !self.upper_side_y_move_range.contains( &( self.upper_y_acc_rotation as f32 ) ) {
                                     self.switch_upper_side_y_move_cycle();
                                     
-                                    if self.upper_side_z_move_range.end == 7.5 {
-                                        self.switch_upper_side_z_move_cycle();
-                                        self.upper_side_z_move_range.end = 15.; // turn it into a full cycle
-                                    }
-                                }                   
+                                }                        
                             },
-                            Move::Right => {
-                                      
-                                let mut rotation_z: f32 = 0.;
+                            Move::Right => {                                     
                                 let rotation_y: f32;
 
                                 if self.upper_side_y_move_cycle == 0 {
                                     rotation_y = -1.;
-
-                                    if self.upper_side_z_move_cycle == 0 {
-                                        rotation_z = 1.;
-                                    } else {
-                                        rotation_z = -1.;
-                                    }
                                 } else {
                                     rotation_y = 1.;
                                 }
                                 
-                                self.upper_z_acc_rotation += rotation_z; // same values?
                                 self.upper_y_acc_rotation += rotation_y; // same values? 
      
-                                if !self.upper_side_z_move_range.contains( &( self.upper_z_acc_rotation as f32 ) ) {
-                                    if self.upper_side_z_move_range.end == 15. {
-                                        self.switch_upper_side_z_move_cycle();
-                                    }
-                                }
-                                
                                 if !self.upper_side_y_move_range.contains( &( self.upper_y_acc_rotation as f32 ) ) {
-                                    self.switch_upper_side_y_move_cycle();
-                                    
-                                    if self.upper_side_z_move_range.end == 7.5 {
-                                        self.switch_upper_side_z_move_cycle();
-                                        self.upper_side_z_move_range.end = 15.; // turn it into a full cycle
-                                    }
+                                    self.switch_upper_side_y_move_cycle();                                
                                 }                  
                             },
                             Move::Jump => {
@@ -273,10 +234,6 @@ impl Leg {
                             m4::y_rotation( deg_to_rad( self.upper_y_acc_rotation ).into() ) 
                         );
 
-                        updated_model_matrix = m4::z_rotate_3_d(
-                            updated_model_matrix, 
-                            m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation ).into() ) 
-                        );   
 
                         updated_model_matrix = m4::translate_3_d( // here is the pivot point
                             updated_model_matrix, 
@@ -323,8 +280,7 @@ impl Leg {
                                     }
                                     
                                     self.joint_z_acc_rotation += displacement; 
-
-                                    
+                           
                                 },
                                 Move::Left => {
                                     let rotation_x: f32;
@@ -332,16 +288,18 @@ impl Leg {
                                     let rotation_z: f32;
 
                                     if self.upper_side_y_move_cycle == 0 {
-                                        rotation_x = 0.75;
-                                        rotation_y = -0.5;
+                                        rotation_x = 1.;
+                                        rotation_y = -1.;
+                                        rotation_z = -1.;
                                     } else {
-                                        rotation_x = -0.75;
-                                        rotation_y = 0.5;
+                                        rotation_x = -1.;
+                                        rotation_y = 1.;
+                                        rotation_z = 1.;
                                     }
                                 
-                                    self.joint_x_acc_rotation += rotation_x; // same values?
-                                    self.joint_y_acc_rotation += rotation_y; // same values? 
-                                    self.joint_z_acc_rotation = self.upper_z_acc_rotation; // same values?              
+                                    self.joint_x_acc_rotation += rotation_x; 
+                                    self.joint_y_acc_rotation += rotation_y; 
+                                    self.joint_z_acc_rotation += rotation_z; 
                                 },
                                 Move::Right => {
                                     let rotation_x: f32;
@@ -349,16 +307,18 @@ impl Leg {
                                     let rotation_z: f32;
                                     
                                     if self.upper_side_y_move_cycle == 0 {
-                                        rotation_x = 0.75;
-                                        rotation_y = -0.5;
+                                        rotation_x = -1.;
+                                        rotation_y = 1.;
+                                        rotation_z = 1.;
                                     } else {
-                                        rotation_x = -0.75;
-                                        rotation_y = 0.5
+                                        rotation_x = 1.;
+                                        rotation_y = -1.;
+                                        rotation_z = -1.;
                                     }
                                     
-                                    self.joint_x_acc_rotation += rotation_x; // same values?
-                                    self.joint_y_acc_rotation += rotation_y; // same values?   
-                                    self.joint_z_acc_rotation = self.upper_z_acc_rotation; // same values?   
+                                    self.joint_x_acc_rotation += rotation_x; 
+                                    self.joint_y_acc_rotation += rotation_y; 
+                                    self.joint_z_acc_rotation += rotation_z; 
                                 },
                                 Move::Jump => {
                                     println!("move jump!");
@@ -440,7 +400,7 @@ impl Leg {
                                 },
                                 Move::Left => {
                                     let rotation_x: f32;    
-                                    if self.upper_side_z_move_cycle == 0 {
+                                    if self.upper_side_y_move_cycle == 0 {
                                         rotation_x = -1.;
                                     } else {
                                         rotation_x = 1.;
@@ -450,7 +410,7 @@ impl Leg {
                                 },
                                 Move::Right => {
                                     let rotation_x: f32;    
-                                    if self.upper_side_z_move_cycle == 0 {
+                                    if self.upper_side_y_move_cycle == 0 {
                                         rotation_x = 1.;
                                     } else {
                                         rotation_x = -1.;

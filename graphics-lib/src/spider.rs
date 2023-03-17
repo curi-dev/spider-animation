@@ -152,10 +152,13 @@ impl Spider {
             body_x_acc_rotation: 0.,
             body_y_acc_rotation: 0.,
             body_data: get_body_data(), // call it directly on the code
-            body_colors: get_body_colors(), // call it directly on the code
+            //body_colors: get_body_colors(), // call it directly on the code
+            body_colors: [0; 270], // call it directly on the code
             head_data: get_head_data(),
-            colors: get_colors(), // call it directly on the code
-            base_leg_colors: get_base_leg_colors(),
+            //colors: get_colors(), // call it directly on the code
+            colors: [0; 108], // call it directly on the code
+            //base_leg_colors: get_base_leg_colors(),
+            base_leg_colors: [0; 54],
             last_pos_model_mat: None,
         }
     }
@@ -181,13 +184,13 @@ impl Spider {
         }
 
         if let Move::Left = *self.control.direction.borrow() {
-            // self.body_y_acc_rotation += 0.1; // body default rotation
-            // y_acc_rotation = 0.1;
+            self.body_y_acc_rotation += 1.; // body default rotation
+            y_acc_rotation = 1.;
         }
 
         if let Move::Right = *self.control.direction.borrow() {         
-            // self.body_y_acc_rotation -= 1.; // body default rotation
-            //y_acc_rotation = -1.;
+            self.body_y_acc_rotation -= 1.; // body default rotation
+            y_acc_rotation = -1.;
         }
 
         if let Move::SpinDown = *self.control.direction.borrow() {
