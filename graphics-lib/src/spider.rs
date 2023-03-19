@@ -11,8 +11,7 @@ use crate::{
     setup_ui_control::{SpiderControl, Move}, 
     leg::Leg, 
     gpu_interface::GpuInterface, 
-    matrix_stack::MatrixStack, 
-    modules::m4::m4::M4 as m4, webgl_utils::deg_to_rad, log
+    modules::m4::m4::M4 as m4, webgl_utils::deg_to_rad
 };
 
 
@@ -24,21 +23,26 @@ pub enum LegType {
 }
 
 pub struct Spider {
+    // colors data
     pub colors: [u8; 108],
     pub base_leg_colors: [u8; 54],
     pub body_colors: [u8; 270],
     pub body_data: [f32; 270],
     pub head_data: [f32; 270], // use body_colors
     pub speed: f32,
+
+    // body data and positions
     pub body_x_acc_translation: f32,
     pub body_z_acc_translation: f32,
     pub body_x_acc_rotation: f32,
-    pub body_y_acc_rotation: f32, 
+    pub body_y_acc_rotation: f32,
+    pub last_pos_model_mat: Option<[f32; 16]>,
+
     pub frontal_legs: [Leg; 2], 
     pub back_legs: [Leg; 2],
     pub middle_legs: [Leg; 4],
+
     control: SpiderControl,
-    pub last_pos_model_mat: Option<[f32; 16]>
 }
 
 impl Spider {
@@ -62,7 +66,7 @@ impl Spider {
                     BODY_HEIGHT / 2.15,
                     BODY_DEPTH - BODY_FRONTAL_DEPTH_OFFSET / 2.
                 ),
-                1   
+                1  
             )
         ];
 
@@ -74,7 +78,7 @@ impl Spider {
                     BODY_HEIGHT / 2.75,
                     BODY_DEPTH - BODY_BACK_DEPTH_OFFSET / 2.
                 ),
-                0
+                1
             ),
 
             Leg::new(
@@ -84,7 +88,7 @@ impl Spider {
                     BODY_HEIGHT / 2.75,
                     BODY_BACK_DEPTH_OFFSET / 2.
                 ),
-                1,
+                0,
             )
         ];
 
@@ -131,16 +135,6 @@ impl Spider {
             ),
         ];
         
-        // here i can active specific legs to start animation
-        frontal_legs[0].start_moving(); 
-        frontal_legs[1].start_moving();
-        back_legs[0].start_moving(); 
-        back_legs[1].start_moving();
-        middle_legs[0].start_moving(); 
-        middle_legs[1].start_moving(); 
-        middle_legs[2].start_moving(); 
-        middle_legs[3].start_moving(); 
-
         Self { 
             control: SpiderControl::new(&canvas), // CharControl
             frontal_legs,
@@ -152,16 +146,17 @@ impl Spider {
             body_x_acc_rotation: 0.,
             body_y_acc_rotation: 0.,
             body_data: get_body_data(), // call it directly on the code
-            //body_colors: get_body_colors(), // call it directly on the code
-            body_colors: [0; 270], // call it directly on the code
+            body_colors: get_body_colors(), // call it directly on the code
+            //body_colors: [0; 270], // call it directly on the code
             head_data: get_head_data(),
-            //colors: get_colors(), // call it directly on the code
-            colors: [0; 108], // call it directly on the code
-            //base_leg_colors: get_base_leg_colors(),
-            base_leg_colors: [0; 54],
+            colors: get_colors(), // call it directly on the code
+            //colors: [0; 108], // call it directly on the code
+            base_leg_colors: get_base_leg_colors(),
+            //base_leg_colors: [0; 54],
             last_pos_model_mat: None,
         }
     }
+
 
     pub fn animate_body(
         &mut self,
@@ -181,18 +176,58 @@ impl Spider {
         if let Move::Forward = *self.control.direction.borrow() {
             self.body_x_acc_translation += 1.; // body default translation
             x_acc_translation = 1.;
+           
+            if self.body_x_acc_translation >= 10. {
+                self.frontal_legs[1].start_moving();
+                self.back_legs[1].start_moving();
+                self.middle_legs[1].start_moving();
+                self.middle_legs[2].start_moving();
+            } else {
+                self.frontal_legs[0].start_moving();
+                self.back_legs[0].start_moving();
+                self.middle_legs[0].start_moving();
+                self.middle_legs[3].start_moving();
+            }
         }
 
         if let Move::Left = *self.control.direction.borrow() {
-            self.body_y_acc_rotation += 1.; // body default rotation
-            y_acc_rotation = 1.;
+            self.body_y_acc_rotation += 1.5; // body default rotation
+            y_acc_rotation = 1.5;
+
+            let rotation_in_range = self.body_y_acc_rotation % 90.;
+            if rotation_in_range >= 12.5 {
+                self.frontal_legs[0].start_moving();
+                self.back_legs[0].start_moving();
+                self.middle_legs[0].start_moving();
+                self.middle_legs[3].start_moving();
+            
+            } else {
+                self.frontal_legs[1].start_moving();
+                self.back_legs[1].start_moving();
+                self.middle_legs[2].start_moving();
+                self.middle_legs[1].start_moving();
+            }
         }
 
         if let Move::Right = *self.control.direction.borrow() {         
-            self.body_y_acc_rotation -= 1.; // body default rotation
-            y_acc_rotation = -1.;
+            self.body_y_acc_rotation -= 1.5; // body default rotation
+            y_acc_rotation = -1.5;
+
+            let rotation_in_range = self.body_y_acc_rotation as f32 % 90.;
+            if (rotation_in_range * -1.) >= 12.5 {
+                self.frontal_legs[1].start_moving();
+                self.back_legs[1].start_moving();
+                self.middle_legs[2].start_moving();
+                self.middle_legs[1].start_moving();
+            } else {
+                self.frontal_legs[0].start_moving();
+                self.back_legs[0].start_moving();
+                self.middle_legs[0].start_moving();
+                self.middle_legs[3].start_moving();
+            }
         }
 
+        // OTHER TYPE OF ANIMATIONS
         if let Move::SpinDown = *self.control.direction.borrow() {
             self.body_x_acc_rotation += 0.1;
             x_acc_rotation = 0.1;

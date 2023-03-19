@@ -18,7 +18,7 @@ pub fn initialize_webgl_context() -> Result<(WebGlRenderingContext, web_sys::Htm
         .unwrap()
         .dyn_into::<WebGlRenderingContext>()?;
        
-    gl.clear_color(0.05, 0.05, 0.25, 1.); 
+    gl.clear_color(1., 1., 0.5, 1.); 
     gl.enable(WebGlRenderingContext::CULL_FACE);
     gl.enable(WebGlRenderingContext::DEPTH_TEST);
  

@@ -40,17 +40,6 @@ impl M4 {
         identity_mat
     }
 
-    pub fn identity_double_x() -> [f32; 16] {        
-        let identity_mat = [
-            1., 0., 0., 0.,
-            0., 1., 0., 0.,
-            0., 0., 1., 0.,
-            1., 0., 0., 1. 
-        ];
-
-        identity_mat
-    }
-
     pub fn translate_3_d(pre_matrix: [f32; 16], translation_mat: [f32; 16]) -> [f32; 16] {
         M4::multiply_mat(pre_matrix, translation_mat)  
     }

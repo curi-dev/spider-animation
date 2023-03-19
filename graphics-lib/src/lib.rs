@@ -94,24 +94,51 @@ impl GraphicsClient {
         // let ui_translate_z_body = self.ui_control.acc_z_translation_body.try_borrow().unwrap();
     
         // creating the model matrix for the body
-        let perspective_mat = m4::perspective(
+        // let projection_mat = m4::projection(
+        //     400., 
+        //     400., 
+        //     800.
+        // );
+
+        let projection_mat = m4::perspective(
             deg_to_rad(DEFAULT_FIELD_OF_VIEW_IN_RADIANS),
             aspect,
             DEFAULT_Z_NEAR,
             DEFAULT_Z_FAR
         );
 
-        let mut body_model_matrix = m4::translate_3_d(
-            perspective_mat, 
-            m4::translation(          
-            INITIAL_BODY_DISPLACEMENT_X + BODY_WIDTH / 2.,        
-            INITIAL_BODY_DISPLACEMENT_Y + BODY_HEIGHT / 2.,       
-            INITIAL_BODY_DISPLACEMENT_Z + BODY_DEPTH / 2., 
-        ));
+        let mut camera_mat = m4::translate_3_d(
+            m4::identity(), 
+            m4::translation(
+                -20., 
+            175., 
+                175.
+            )
+        );
 
-        body_model_matrix = m4::y_rotate_3_d(
-            body_model_matrix, 
-            m4::y_rotation( deg_to_rad( -90. ).into() )
+        camera_mat = m4::y_rotate_3_d(
+            camera_mat, 
+            m4::y_rotation( deg_to_rad( -45. ).into() )
+        );
+
+        let view_mat = nalgebra::Matrix4::from_column_slice(&camera_mat).try_inverse().unwrap();
+
+        let view_projection_mat = m4::multiply_mat(
+            projection_mat, 
+            view_mat.as_slice().try_into().unwrap()
+        );
+
+        // let mut body_model_matrix = m4::translate_3_d(
+        //     projection_mat, 
+        //     m4::translation(          
+        //     INITIAL_BODY_DISPLACEMENT_X,        
+        //     INITIAL_BODY_DISPLACEMENT_Y,       
+        //     INITIAL_BODY_DISPLACEMENT_Z, 
+        // ));
+
+        let mut body_model_matrix = m4::x_rotate_3_d(
+            view_projection_mat,
+            m4::y_rotation( deg_to_rad( -60. ).into() )
         );
 
         // when using rust and webgl together, rust is used for data manipulation and

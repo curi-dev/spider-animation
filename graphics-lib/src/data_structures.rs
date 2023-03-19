@@ -328,8 +328,8 @@ pub fn get_body_data() -> [f32; 270] {
     let body_data = [
         // side one
         0., 0., 0.,
-        0., BODY_HEIGHT, 0., // height
-        BODY_WIDTH, 0., 0., // width
+        0., BODY_HEIGHT, 0.,
+        BODY_WIDTH, 0., 0., 
         
         BODY_WIDTH, 0., 0., // width
         0., BODY_HEIGHT, 0., // height
