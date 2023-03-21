@@ -61,7 +61,7 @@ fn get_upper_or_middle_leg_data(width: f32, big_height: f32, small_height: f32, 
     upper_leg_data
 }
 
-fn get_bottom_leg_data(width: f32, height: f32, depth: f32) -> Vec<f32> {
+fn get_base_leg_data(width: f32, height: f32, depth: f32) -> Vec<f32> {
     let apex = (width, height / 2., depth / 2.);
     
     let bottom_leg_data =vec![
@@ -324,6 +324,138 @@ pub fn get_body_colors() -> [u8; 270] {
     colors
 }
 
+pub fn get_body_normals() -> [i8; 270] {
+
+    let normal_data = [
+        // side one
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+
+        // side two
+        1, 0, 0,
+        1, 0, 0,
+        1, 0, 0,
+        1, 0, 0,
+        1, 0, 0,
+        1, 0, 0,
+
+        // convergent 1 to between A
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        
+        // convergent 2 to between A
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+
+        // between A
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+
+        // downside
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        // upside
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+
+        // triangle one up side close
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+
+        // triangle two up side close
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+
+        // close between one & two
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+
+        // triangle one down side close
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        // triangle two down side close
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        // close between one & two
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        // tail convergent one
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+
+        // tail convergent two
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+
+        // tail close triangle up
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+
+        // tail close triangle down
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+    ];
+
+    normal_data
+
+}
+
 pub fn get_body_data() -> [f32; 270] {
     let body_data = [
         // side one
@@ -371,7 +503,7 @@ pub fn get_body_data() -> [f32; 270] {
         BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH / 3.,
         BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, BODY_HEIGHT, BODY_DEPTH - (BODY_DEPTH / 3.),
         
-        // upside (red)
+        // downside (red)
         0., 0., 0.,
         BODY_WIDTH, 0., 0.,
         0., 0., BODY_DEPTH,
@@ -380,7 +512,7 @@ pub fn get_body_data() -> [f32; 270] {
         BODY_WIDTH, 0., 0.,
         BODY_WIDTH, 0., BODY_DEPTH,
 
-        // downside (blue)
+        // upside (blue)
         0., BODY_HEIGHT, BODY_DEPTH,
         BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH,
         0., BODY_HEIGHT, 0.,
@@ -618,6 +750,136 @@ pub fn get_head_data() -> [f32; 270] {
     body_data
 }
 
+pub fn get_head_normals() -> [i8; 270] {
+    let normal_data = [
+        // side one
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+
+        // side two
+        1, 0, 0,
+        1, 0, 0,
+        1, 0, 0,
+        1, 0, 0,
+        1, 0, 0,
+        1, 0, 0,
+
+        // convergent 1 to between A
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        
+        // convergent 2 to between A
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+
+        // between A
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+
+        // downside
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        // upside
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+
+        // triangle one up side close
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+
+        // triangle two up side close
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+
+        // close between one & two
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+
+        // triangle one down side close
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        // triangle two down side close
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        // close between one & two
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        // tail convergent one
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+
+        // tail convergent two
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+
+        // tail close triangle up
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+
+        // tail close triangle down
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+    ];
+
+    normal_data
+}
+
 pub fn get_leg_data(leg_position: &LegType) -> Vec<Vec<f32>> {
 
     let upper_leg_width: f32;
@@ -695,7 +957,7 @@ pub fn get_leg_data(leg_position: &LegType) -> Vec<Vec<f32>> {
         joint_leg_small_height,
         joint_leg_depth
     );
-    let bottom_leg_data = get_bottom_leg_data(
+    let bottom_leg_data = get_base_leg_data(
         base_leg_width, 
         base_leg_height, 
         base_leg_depth
@@ -704,8 +966,87 @@ pub fn get_leg_data(leg_position: &LegType) -> Vec<Vec<f32>> {
     vec![upper_leg_data, middle_leg_data, bottom_leg_data]
 }
 
-pub fn get_floor_data() -> [f32; 18] {
+pub fn get_leg_upper_and_joint_normals() -> [i8; 108] {
 
+    let normals_data = [
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+    ];
+
+    normals_data
+}
+
+pub fn get_leg_base_normals() -> [i8; 54] {
+    let normals_data = [
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+        
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+
+        0, -1, 0,
+        0, -1, 0,
+        0, -1, 0,
+    ];
+
+    normals_data
+}
+
+pub fn get_floor_data() -> [f32; 18] {
+    
     let floor_data: [f32; 18] = [
         -200., 0., 0.,
         1000., 0., 0.,
@@ -717,4 +1058,18 @@ pub fn get_floor_data() -> [f32; 18] {
     ];
 
     floor_data
+}
+
+pub fn get_floor_normals() -> [i8; 18] {
+
+    let normals_data = [
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+        -1, 0, 0,
+    ];
+
+    normals_data
 }

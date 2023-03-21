@@ -1,17 +1,15 @@
 pub const SHADER: &str = r#"
     attribute vec4 aPosition;
-    attribute vec4 aColor;
+    attribute vec3 aNormal;
 
     uniform mat4 uMatrix;
 
-    varying vec4 vColor;
+    varying vec3 vNormal;
 
     void main() {
-        //float zToDivideBy = 1.0 + aPosition.z; // fudge factor
-        //gl_Position = uMatrix * vec4(aPosition.xy / zToDivideBy, aPosition.zw);
         gl_Position = uMatrix * aPosition;
 
-        vColor = aColor;
+        vNormal = aNormal;
     }
 "#;
 

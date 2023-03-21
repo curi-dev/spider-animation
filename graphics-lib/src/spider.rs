@@ -4,7 +4,7 @@ use crate::{
         get_colors,  
         get_base_leg_colors, 
         get_body_colors, 
-        get_body_data, get_head_data
+        get_body_data, get_head_data, get_body_normals, get_head_normals, get_leg_upper_and_joint_normals, get_leg_base_normals
     }, 
     constants::*, 
     setup_ui_control::{SpiderControl, Move}, 
@@ -28,7 +28,9 @@ pub struct Spider {
     pub base_leg_colors: [u8; 54],
     pub body_colors: [u8; 270],
     pub body_data: [f32; 270],
+    body_normals: [i8; 270],
     pub head_data: [f32; 270], // use body_colors
+    head_normals: [i8; 270],
     pub speed: f32,
 
     // body data and positions
@@ -145,15 +147,14 @@ impl Spider {
             body_z_acc_translation: 0.,
             body_x_acc_rotation: 0.,
             body_y_acc_rotation: 0.,
-            body_data: get_body_data(), // call it directly on the code
-            body_colors: get_body_colors(), // call it directly on the code
-            //body_colors: [0; 270], // call it directly on the code
+            body_data: get_body_data(), 
+            body_colors: get_body_colors(), 
+            body_normals: get_body_normals(),
             head_data: get_head_data(),
-            colors: get_colors(), // call it directly on the code
-            //colors: [0; 108], // call it directly on the code
+            colors: get_colors(), 
             base_leg_colors: get_base_leg_colors(),
-            //base_leg_colors: [0; 54],
             last_pos_model_mat: None,
+            head_normals: get_head_normals(), 
         }
     }
 
@@ -164,10 +165,13 @@ impl Spider {
         gpu_interface: &GpuInterface, 
         positions_buffer: &WebGlBuffer, 
         colors_buffer: &WebGlBuffer,
+        normals_buffer: &WebGlBuffer,
+        light: &[f32; 3]
     ) -> [f32; 16] {
         
         gpu_interface.send_positions_to_gpu(&self.body_data, &positions_buffer);
-        gpu_interface.send_colors_to_gpu(&self.body_colors, &colors_buffer);
+        //gpu_interface.send_colors_to_gpu(&self.body_colors, &colors_buffer);
+        gpu_interface.send_normals_to_gpu(&self.body_normals, &normals_buffer);
 
         let mut x_acc_translation = 0.;
         let mut y_acc_rotation = 0.;
@@ -275,7 +279,8 @@ impl Spider {
         gpu_interface.consume_data(
             self.body_data.len() as i32 / 3, 
             Gl::TRIANGLES,
-            &final_mat
+            &final_mat,
+            &light
         );
         
         self.last_pos_model_mat = Option::Some(transformation_model_mat);
@@ -283,7 +288,16 @@ impl Spider {
         final_mat
     }
 
-    pub fn animate_front_legs(&mut self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
+    pub fn animate_front_legs(
+        &mut self, 
+        gpu_interface: 
+        &GpuInterface, 
+        body_model_matrix: &[f32; 16], 
+        positions_buffer: &WebGlBuffer, 
+        colors_buffer: &WebGlBuffer,
+        normals_buffer: &WebGlBuffer,
+        light: &[f32; 3]
+    ) {
         for (i, leg) in self.frontal_legs.iter_mut().enumerate() {   
             
             let animation_model_matrices = leg.walk_animate(
@@ -297,22 +311,33 @@ impl Spider {
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
                 
                 if i == 2 { // only for base leg 
-                    gpu_interface.send_colors_to_gpu(&self.base_leg_colors, colors_buffer);
+                    //gpu_interface.send_colors_to_gpu(&self.base_leg_colors, colors_buffer);
+                    gpu_interface.send_normals_to_gpu(&get_leg_base_normals(), normals_buffer);
                 } else {
-                    gpu_interface.send_colors_to_gpu(&self.colors, colors_buffer);
+                    //gpu_interface.send_colors_to_gpu(&self.colors, colors_buffer);
+                    gpu_interface.send_normals_to_gpu(&get_leg_upper_and_joint_normals(), normals_buffer);
                 }
                 
                 gpu_interface.consume_data(
                     leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
-                    &model_matrix.unwrap()
+                    &model_matrix.unwrap(),
+                    &light
                 );
             }
             
         }
     }
 
-    pub fn animate_back_legs(&mut self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
+    pub fn animate_back_legs(
+        &mut self, 
+        gpu_interface: &GpuInterface, 
+        body_model_matrix: &[f32; 16], 
+        positions_buffer: &WebGlBuffer, 
+        colors_buffer: &WebGlBuffer,
+        normals_buffer: &WebGlBuffer,
+        light: &[f32; 3]
+    ) {
         for (i, leg) in self.back_legs.iter_mut().enumerate() {   
             
             let animation_model_matrix = leg.walk_animate(
@@ -326,21 +351,32 @@ impl Spider {
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
                 
                 if i == 2 { // only for base leg 
-                    gpu_interface.send_colors_to_gpu(&self.base_leg_colors, colors_buffer);
+                    //gpu_interface.send_colors_to_gpu(&self.base_leg_colors, colors_buffer);
+                    gpu_interface.send_normals_to_gpu(&get_leg_base_normals(), normals_buffer);
                 } else {
-                    gpu_interface.send_colors_to_gpu(&self.colors, colors_buffer);
+                    //gpu_interface.send_colors_to_gpu(&self.colors, colors_buffer);
+                    gpu_interface.send_normals_to_gpu(&get_leg_upper_and_joint_normals(), normals_buffer);
                 }
                 
                 gpu_interface.consume_data(
                     leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
-                    &model_matrix.unwrap()
+                    &model_matrix.unwrap(),
+                    &light
                 );
             }            
         }
     }
 
-    pub fn animate_middle_legs(&mut self, gpu_interface: &GpuInterface, body_model_matrix: &[f32; 16], positions_buffer: &WebGlBuffer, colors_buffer: &WebGlBuffer) {
+    pub fn animate_middle_legs(
+        &mut self, 
+        gpu_interface: &GpuInterface, 
+        body_model_matrix: &[f32; 16], 
+        positions_buffer: &WebGlBuffer, 
+        colors_buffer: &WebGlBuffer,
+        normals_buffer: &WebGlBuffer,
+        light: &[f32; 3]
+    ) {
         for (i, leg) in self.middle_legs.iter_mut().enumerate() {   
             
             let animation_model_matrix = leg.walk_animate(
@@ -354,15 +390,18 @@ impl Spider {
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
                 
                 if i == 2 { // only for base leg 
-                    gpu_interface.send_colors_to_gpu(&self.base_leg_colors, colors_buffer);
+                    //gpu_interface.send_colors_to_gpu(&self.base_leg_colors, colors_buffer);
+                    gpu_interface.send_normals_to_gpu(&get_leg_base_normals(), normals_buffer);
                 } else {
-                    gpu_interface.send_colors_to_gpu(&self.colors, colors_buffer);
+                    //gpu_interface.send_colors_to_gpu(&self.colors, colors_buffer);
+                    gpu_interface.send_normals_to_gpu(&get_leg_upper_and_joint_normals(), normals_buffer);
                 }
                 
                 gpu_interface.consume_data(
                     leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
-                    &model_matrix.unwrap()
+                    &model_matrix.unwrap(),
+                    &light
                 );
             }            
         }

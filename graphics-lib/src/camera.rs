@@ -3,7 +3,7 @@ use nalgebra::Vector3;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::HtmlCanvasElement;
 
-use crate::{log, m4, webgl_utils::deg_to_rad};
+use crate::{log, m4};
 
 
 pub struct Camera {
@@ -92,19 +92,26 @@ impl Camera {
 
     }
 
+    pub fn curr_updated_vertex_position(&self) -> [f32; 3] {
+        let eye_curr_position = self.curr_updated_position_matrix();
+        
+        [
+            eye_curr_position[12],
+            eye_curr_position[13],
+            eye_curr_position[14]
+        ]
+    }
+
     fn curr_updated_position_matrix(&self) -> [f32; 16] {
         
         m4::M4::multiply_mat(
-            
-                m4::M4::identity(), 
-                m4::M4::translation(
-                    self.eye[0], 
-                    self.eye[1], 
-                    self.eye[2],                
-                )
-            
+            m4::M4::identity(), 
+            m4::M4::translation(
+                self.eye[0], 
+                self.eye[1], 
+                self.eye[2],                
+            )           
         )
-        
     }
 
     pub fn look_at(

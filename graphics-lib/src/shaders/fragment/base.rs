@@ -1,22 +1,18 @@
 pub const SHADER: &str = r#"
     precision mediump float;
 
-    varying vec4 vColor;
+    uniform vec3 uReverseLight;
+    uniform vec4 uColor;
+
+    varying vec3 vNormal;
 
     void main() {
-        gl_FragColor = vColor;
+        vec3 normal = normalize(vNormal); // why normalize that (interpolation?)
+
+        float light = dot(normal, uReverseLight); // why not normalize uReverseLightDirection?
+
+        gl_FragColor = uColor;
+
+        gl_FragColor.rgb *= light; // light is a scalar value
     }
 "#;
-
-
-// pub const SHADER: &str = r#"
-//     precision mediump float;
-
-//     uniform sampler2D uImage;
-
-//     varying vec2 vTextCoords;
-
-//     void main() {
-//         gl_FragColor = texture2D(uImage, vTextCoords).gbra;
-//     }
-// "#;

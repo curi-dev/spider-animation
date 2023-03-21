@@ -85,9 +85,19 @@ impl GraphicsClient {
 
         // setup camera properly
         self.camera.update_eye();
+
+        let spider_last_position = self.spider.last_pos_model_mat;
+        let target = match spider_last_position {
+            Some(position_mat) => nalgebra::Vector3::new(
+                    position_mat[12], 
+                    position_mat[13], 
+                    position_mat[14]
+                ),
+            None => nalgebra::Vector3::new(0., 0., 0.),
+        };
         
         let look_at = self.camera.look_at(
-            nalgebra::Vector3::new(0., 0., 0.), 
+            target, 
             nalgebra::Vector3::new(0., 1., 0.)
         );
 
@@ -110,67 +120,83 @@ impl GraphicsClient {
                 .try_into()
                 .unwrap(), 
             view_mat
-                //.to_homogeneous() // complete the mat?
                 .as_slice()
                 .try_into()
                 .unwrap()
         );
 
+    
         // when using rust and webgl together, rust is used for data manipulation and
         // calculation, while webgl is used for rendering and displaying the data on the
         // client-side. this buffer is not being persisted on rust's layout memory, but rather
         // in the graphics card's memory on the client-side
         let positions_buffer = self.gpu_interface.gl.create_buffer().unwrap();  
         let colors_buffer = self.gpu_interface.gl.create_buffer().unwrap(); 
-        
-        // floor below
+        let normals_buffer = self.gpu_interface.gl.create_buffer().unwrap();
+
+        // light setup (create a light class)
+        let light_coord_equals_camera_position = self.camera.curr_updated_vertex_position();
+        // light setup
+
+        // floor below (can turn into a entity)
         let floor_data = get_floor_data();
         self.gpu_interface.send_positions_to_gpu(&floor_data, &positions_buffer);
-        self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
+        self.gpu_interface.send_normals_to_gpu(&get_floor_normals(), &normals_buffer);
+        //self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
 
         self.gpu_interface.consume_data(
             floor_data.len() as i32 / 3, 
             Gl::TRIANGLES,
-            &view_projection_mat
+            &view_projection_mat,
+            &light_coord_equals_camera_position
         );
         // floor above
 
-        let mut body_model_matrix = M4::x_rotate_3_d(
-            view_projection_mat,
-            M4::y_rotation( deg_to_rad( -60. ).into() )
-        );
+        // let mut body_model_matrix = M4::x_rotate_3_d(
+        //     view_projection_mat,
+        //     M4::y_rotation( deg_to_rad( -60. ).into() )
+        // );
 
-        body_model_matrix = self.spider.animate_body(
-            &body_model_matrix,
+        let body_model_matrix = self.spider.animate_body(
+            &view_projection_mat, // no rotation anymore
             &self.gpu_interface,  
             &positions_buffer, 
             &colors_buffer,
+            &normals_buffer,
+            &light_coord_equals_camera_position
         );
 
         self.spider.animate_front_legs(
             &self.gpu_interface, 
             &body_model_matrix, 
             &positions_buffer, 
-            &colors_buffer
+            &colors_buffer,
+            &normals_buffer,
+            &light_coord_equals_camera_position
         );
 
         self.spider.animate_back_legs(
             &self.gpu_interface, 
             &body_model_matrix, 
             &positions_buffer, 
-            &colors_buffer
+            &colors_buffer,
+            &normals_buffer,
+            &light_coord_equals_camera_position
         );
         
         self.spider.animate_middle_legs(
             &self.gpu_interface, 
             &body_model_matrix, 
             &positions_buffer, 
-            &colors_buffer
+            &colors_buffer,
+            &normals_buffer,
+            &light_coord_equals_camera_position
         );
 
         // head below
         self.gpu_interface.send_positions_to_gpu(&self.spider.head_data, &positions_buffer);
-        self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
+        self.gpu_interface.send_normals_to_gpu(&get_body_normals(), &normals_buffer);
+        //self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
         
         let head_model_matrix = M4::translate_3_d(
             body_model_matrix, 
@@ -183,7 +209,8 @@ impl GraphicsClient {
         self.gpu_interface.consume_data(
             self.spider.head_data.len() as i32 / 3, 
             Gl::TRIANGLES, 
-            &head_model_matrix
+            &head_model_matrix,
+            &light_coord_equals_camera_position
         );
         // head above
     

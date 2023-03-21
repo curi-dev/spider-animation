@@ -361,6 +361,10 @@ export function __wbg_bufferData_a33528a74dd300f4(arg0, arg1, arg2, arg3) {
     getObject(arg0).bufferData(arg1 >>> 0, getObject(arg2), arg3 >>> 0);
 };
 
+export function __wbg_uniform3fv_d1ef35c158c348e7(arg0, arg1, arg2, arg3) {
+    getObject(arg0).uniform3fv(getObject(arg1), getArrayF32FromWasm0(arg2, arg3));
+};
+
 export function __wbg_uniformMatrix4fv_f16e4a5553357886(arg0, arg1, arg2, arg3, arg4) {
     getObject(arg0).uniformMatrix4fv(getObject(arg1), arg2 !== 0, getArrayF32FromWasm0(arg3, arg4));
 };
@@ -591,7 +595,7 @@ export function __wbindgen_memory() {
     return addHeapObject(ret);
 };
 
-export function __wbindgen_closure_wrapper218(arg0, arg1, arg2) {
+export function __wbindgen_closure_wrapper225(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 15, __wbg_adapter_16);
     return addHeapObject(ret);
 };
