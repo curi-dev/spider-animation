@@ -703,3 +703,18 @@ pub fn get_leg_data(leg_position: &LegType) -> Vec<Vec<f32>> {
 
     vec![upper_leg_data, middle_leg_data, bottom_leg_data]
 }
+
+pub fn get_floor_data() -> [f32; 18] {
+
+    let floor_data: [f32; 18] = [
+        -200., 0., 0.,
+        1000., 0., 0.,
+        -200., 0., -500.,
+        
+        -200., 0., -500.,
+        1000., 0., 0.,
+        1000., 0., -500.,
+    ];
+
+    floor_data
+}

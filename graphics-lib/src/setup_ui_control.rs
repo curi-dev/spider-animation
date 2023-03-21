@@ -18,9 +18,7 @@ pub struct SetupUiControl{
 
 impl SetupUiControl {
     pub fn new(canvas: &HtmlCanvasElement) -> Self {
-        // let active_object = Rc::new(RefCell::new(0));   
-        // let active_object_clone = active_object.clone();
-
+        
         let z_translation = Rc::new(RefCell::new(0.));   
         let z_translation_clone = z_translation.clone();
     

@@ -1,11 +1,10 @@
 use std::panic;
+use camera::Camera;
 use console_error_panic_hook;
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlCanvasElement;
 use web_sys::HtmlImageElement;
 use web_sys::WebGlRenderingContext as Gl;
-
-mod modules; // mod modules? not good
 
 mod shaders;
 mod setup;
@@ -17,20 +16,19 @@ mod data_structures;
 mod constants;
 mod leg;
 mod gpu_interface;
-mod matrix_stack;
-
-use setup::initialize_webgl_context;
-use modules::m4::m4::M4 as m4;
-use webgl_utils::resize_canvas_to_display_size;
-use programs::base::ProgramBuilder;
-use setup_ui_control::SetupUiControl;
+mod camera;
+mod m4;
 
 use crate::constants::*;
+use crate::data_structures::*;
 use crate::gpu_interface::GpuInterface;
 use crate::programs::base::Program;
+use crate::spider::Spider; 
 
-use crate::spider::Spider; // separate types and data structures 
-use crate::webgl_utils::deg_to_rad;
+use webgl_utils::{resize_canvas_to_display_size, deg_to_rad};
+use setup::initialize_webgl_context;
+use programs::base::ProgramBuilder;
+use m4::M4;
 
 
 #[wasm_bindgen]
@@ -43,12 +41,8 @@ extern "C" {
 
 #[wasm_bindgen]
 pub struct GraphicsClient {
-    //gl: WebGlRenderingContext,
     canvas: HtmlCanvasElement,
-    // a_positions: i32,
-    // u_matrix: WebGlUniformLocation,
-    // a_color: i32,
-    ui_control: SetupUiControl,
+    camera: Camera,
     spider: spider::Spider,
     gpu_interface: GpuInterface
 }
@@ -69,15 +63,15 @@ impl GraphicsClient {
 
         gl.use_program(Some(&program));
 
-        let ui_control = SetupUiControl::new(&canvas);
-
         let gpu_interface = GpuInterface::new(gl, &program);
 
+        let camera = Camera::new(0., 0., 100., &canvas);
+
         Self {
-            spider: Spider::new(&canvas),
+            spider:Spider::new(&canvas),
             canvas,
-            gpu_interface,
-            ui_control,
+            gpu_interface, 
+            camera 
         }      
     }
 
@@ -89,56 +83,37 @@ impl GraphicsClient {
         
         let aspect = (self.canvas.client_width() / self.canvas.client_height()) as f32;
 
-        // let ui_rotation_x_body = self.ui_control.acc_x_rotation_body.try_borrow().unwrap();
-        // let ui_rotation_y_body = self.ui_control.acc_y_rotation_body.try_borrow().unwrap();
-        // let ui_translate_z_body = self.ui_control.acc_z_translation_body.try_borrow().unwrap();
-    
-        // creating the model matrix for the body
-        // let projection_mat = m4::projection(
-        //     400., 
-        //     400., 
-        //     800.
-        // );
+        // setup camera properly
+        self.camera.update_eye();
+        
+        let look_at = self.camera.look_at(
+            nalgebra::Vector3::new(0., 0., 0.), 
+            nalgebra::Vector3::new(0., 1., 0.)
+        );
 
-        let projection_mat = m4::perspective(
-            deg_to_rad(DEFAULT_FIELD_OF_VIEW_IN_RADIANS),
-            aspect,
-            DEFAULT_Z_NEAR,
+        let view_mat = nalgebra::Matrix4::from_column_slice(
+            &look_at
+            )
+            .try_inverse()
+            .unwrap();
+
+        let projection_mat = nalgebra::Perspective3::new(
+            aspect, 
+            deg_to_rad(DEFAULT_FIELD_OF_VIEW_IN_RADIANS), 
+            DEFAULT_Z_NEAR, 
             DEFAULT_Z_FAR
         );
-
-        let mut camera_mat = m4::translate_3_d(
-            m4::identity(), 
-            m4::translation(
-                -20., 
-            175., 
-                175.
-            )
-        );
-
-        camera_mat = m4::y_rotate_3_d(
-            camera_mat, 
-            m4::y_rotation( deg_to_rad( -45. ).into() )
-        );
-
-        let view_mat = nalgebra::Matrix4::from_column_slice(&camera_mat).try_inverse().unwrap();
-
-        let view_projection_mat = m4::multiply_mat(
-            projection_mat, 
-            view_mat.as_slice().try_into().unwrap()
-        );
-
-        // let mut body_model_matrix = m4::translate_3_d(
-        //     projection_mat, 
-        //     m4::translation(          
-        //     INITIAL_BODY_DISPLACEMENT_X,        
-        //     INITIAL_BODY_DISPLACEMENT_Y,       
-        //     INITIAL_BODY_DISPLACEMENT_Z, 
-        // ));
-
-        let mut body_model_matrix = m4::x_rotate_3_d(
-            view_projection_mat,
-            m4::y_rotation( deg_to_rad( -60. ).into() )
+        let view_projection_mat = M4::multiply_mat(
+            projection_mat
+                .to_homogeneous()
+                .as_slice()
+                .try_into()
+                .unwrap(), 
+            view_mat
+                //.to_homogeneous() // complete the mat?
+                .as_slice()
+                .try_into()
+                .unwrap()
         );
 
         // when using rust and webgl together, rust is used for data manipulation and
@@ -148,11 +123,23 @@ impl GraphicsClient {
         let positions_buffer = self.gpu_interface.gl.create_buffer().unwrap();  
         let colors_buffer = self.gpu_interface.gl.create_buffer().unwrap(); 
         
+        // floor below
+        let floor_data = get_floor_data();
+        self.gpu_interface.send_positions_to_gpu(&floor_data, &positions_buffer);
+        self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
 
-        // returns the new translated body model matrix
-        // ui_translate_z_body: f32,
-        // ui_rotation_x_body: f32,
-        // ui_rotation_y_body: f32,
+        self.gpu_interface.consume_data(
+            floor_data.len() as i32 / 3, 
+            Gl::TRIANGLES,
+            &view_projection_mat
+        );
+        // floor above
+
+        let mut body_model_matrix = M4::x_rotate_3_d(
+            view_projection_mat,
+            M4::y_rotation( deg_to_rad( -60. ).into() )
+        );
+
         body_model_matrix = self.spider.animate_body(
             &body_model_matrix,
             &self.gpu_interface,  
@@ -181,13 +168,13 @@ impl GraphicsClient {
             &colors_buffer
         );
 
-        // // head below
+        // head below
         self.gpu_interface.send_positions_to_gpu(&self.spider.head_data, &positions_buffer);
         self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
         
-        let head_model_matrix = m4::translate_3_d(
+        let head_model_matrix = M4::translate_3_d(
             body_model_matrix, 
-            m4::translation(
+            M4::translation(
             BODY_WIDTH + BODY_FRONTAL_WIDTH_OFFSET, 
             3., 
             BODY_DEPTH / 2. - HEAD_DEPTH / 2. 
@@ -198,7 +185,7 @@ impl GraphicsClient {
             Gl::TRIANGLES, 
             &head_model_matrix
         );
-        // head above  
+        // head above
     
     }
 }

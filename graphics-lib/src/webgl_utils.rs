@@ -25,3 +25,13 @@ pub fn deg_to_rad(angle_in_deg: f32) -> f32 {
 pub fn rad_to_deg(angle_in_rad: f32) -> f32 {
     return angle_in_rad * 180. / PI as f32;
 }
+
+// pub fn normalize(v: [f32; 3]) {
+//     let length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+//     // make sure we don't divide by 0.
+//     if length > 0.00001 {
+//       return [v[0] / length, v[1] / length, v[2] / length];
+//     } else {
+//       return [0, 0, 0];
+//     }
+//   }

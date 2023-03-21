@@ -1,4 +1,3 @@
-use nalgebra::Matrix4;
 use web_sys::{HtmlCanvasElement, WebGlBuffer, WebGlRenderingContext as Gl};
 use crate::{
     data_structures::{
@@ -11,7 +10,8 @@ use crate::{
     setup_ui_control::{SpiderControl, Move}, 
     leg::Leg, 
     gpu_interface::GpuInterface, 
-    modules::m4::m4::M4 as m4, webgl_utils::deg_to_rad
+    m4::M4 as m4, 
+    webgl_utils::deg_to_rad
 };
 
 
@@ -48,7 +48,7 @@ pub struct Spider {
 impl Spider {
     pub fn new(canvas: &HtmlCanvasElement) -> Self {
         //ITERATE OVER RANGES OR NUMBER OF LEGS FOR LESS CODE or LEG BUILDER
-        let mut frontal_legs = [
+        let frontal_legs = [
             Leg::new(
                 LegType::Frontal, 
                 ( 
@@ -70,7 +70,7 @@ impl Spider {
             )
         ];
 
-        let mut back_legs = [
+        let back_legs = [
             Leg::new(
                 LegType::Back, 
                 ( 
@@ -92,7 +92,7 @@ impl Spider {
             )
         ];
 
-        let mut middle_legs = [
+        let middle_legs = [
             Leg::new(
                 LegType::Middle, 
                 (  

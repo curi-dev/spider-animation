@@ -1,5 +1,13 @@
 use std::ops::Range;
-use crate::{spider::LegType, data_structures::*, modules::m4::m4::M4 as m4, constants::*, webgl_utils::deg_to_rad, setup_ui_control::{SpiderControl, Move}, matrix_stack::MatrixStack, log};
+use crate::{
+    spider::LegType, 
+    data_structures::*, 
+    m4::M4 as m4, 
+    constants::*, 
+    webgl_utils::deg_to_rad, 
+    setup_ui_control::Move, 
+    log
+};
 
 
 pub struct Leg {
