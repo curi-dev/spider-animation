@@ -1,8 +1,10 @@
 use std::ops::Range;
+use nalgebra::{SVD, Matrix4};
+
 use crate::{
     spider::LegType, 
     data_structures::*, 
-    m4::M4 as m4, 
+    m4::{M4 as m4}, 
     constants::*, 
     webgl_utils::deg_to_rad, 
     setup_ui_control::Move, 
@@ -129,12 +131,22 @@ impl Leg {
         pre_matrix: &[f32; 16], 
         direction: &Move, 
         leg_i: usize,
-    ) -> [Option<[f32; 16]>; 3] {
+    ) -> ([Option<[f32; 16]>; 3], [Option<[f32; 16]>; 3]) {
 
-        //let mut animation_model_matrices = Vec::new();
+
         let mut animation_models: [Option<[f32; 16]>; 3] = [None; 3];
-
+        let mut accumulated_rotations_for_normal_transformations: [Option<[f32; 16]>; 3] = [None; 3];
         let mut animation_matrix_stack = Vec::new();
+
+        // here i will extract only the rotation from the pre_matrix 
+        let converted_pre_matrix = nalgebra::Matrix4::from_column_slice(pre_matrix);
+        let svd = SVD::new(converted_pre_matrix, true, true);
+       
+        let r = svd.u.unwrap() * svd.v_t.unwrap().transpose();
+
+        //let pre_matrix_rotation_matrix = r.try_normalize(std::f32::EPSILON).unwrap_or_default();
+        //let pre_matrix_rotation_matrix_slice: [f32; 16] = pre_matrix_rotation_matrix.as_slice().try_into().unwrap();
+        
         if let LegType::Frontal = self.position {
             println!("is frontal leg");
 
@@ -161,6 +173,7 @@ impl Leg {
 
                         animation_models[0] = Some(original_transformation);
                         animation_matrix_stack.push(original_transformation); 
+                        accumulated_rotations_for_normal_transformations[0] = Some(m4::identity());
 
                     } else {
                         match direction {
@@ -238,17 +251,24 @@ impl Leg {
                             )
                         );
 
-                        updated_model_matrix = m4::z_rotate_3_d(
-                            updated_model_matrix, 
-                            m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation * -1. ).into() ) 
+                        // the accumulate rotations are necessary to transform the normals
+                        let accumulated_rotations = m4::multiply_mat(
+                            m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation * -1. ).into() ), 
+                            m4::y_rotation( deg_to_rad( self.upper_y_acc_rotation ).into() )
                         );
+
+                        let accumulated_rotations_from_decomposed = (
+                            r * Matrix4::from_column_slice(&accumulated_rotations)
+                        )
+                        .try_normalize(std::f32::EPSILON)
+                        .unwrap_or_default();
                         
-                        // only side animations below
-                        updated_model_matrix = m4::y_rotate_3_d(
+                        accumulated_rotations_for_normal_transformations[0] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
+                        
+                        updated_model_matrix = m4::multiply_mat(
                             updated_model_matrix, 
-                            m4::y_rotation( deg_to_rad( self.upper_y_acc_rotation ).into() ) 
+                            accumulated_rotations
                         );
-                        // only side animations over
 
                         updated_model_matrix = m4::translate_3_d( 
                             updated_model_matrix, 
@@ -277,7 +297,8 @@ impl Leg {
 
                     if !self.is_moving {
                         animation_models[leg_part] = Some(original_transformation);
-                        animation_matrix_stack.push(original_transformation); 
+                        animation_matrix_stack.push(original_transformation);
+                        accumulated_rotations_for_normal_transformations[leg_part] = Some(m4::identity()); 
 
                         if leg_part == 2 {
                             animation_matrix_stack.drain(..);
@@ -359,22 +380,28 @@ impl Leg {
                             );
 
                             // only side animations below
-                            updated_model_matrix = m4::x_rotate_3_d(
-                                updated_model_matrix, 
-                                m4::x_rotation( deg_to_rad( self.joint_x_acc_rotation ).into() ) 
-                            );
-
-                            updated_model_matrix = m4::y_rotate_3_d(
-                                updated_model_matrix, 
+                            let mut accumulated_rotations = m4::multiply_mat(
+                                m4::x_rotation( deg_to_rad( self.joint_x_acc_rotation ).into() ), 
                                 m4::y_rotation( deg_to_rad( self.joint_y_acc_rotation * -1. ).into() ) 
                             );
-                            //only side animations above
 
-                            updated_model_matrix = m4::z_rotate_3_d(
-                                updated_model_matrix, 
+                            accumulated_rotations = m4::multiply_mat(
+                                accumulated_rotations, 
                                 m4::z_rotation( deg_to_rad( self.joint_z_acc_rotation ).into() ) 
                             );
 
+                            let accumulated_rotations_from_decomposed = (
+                                r * Matrix4::from_column_slice(&accumulated_rotations)
+                            )
+                            .try_normalize(std::f32::EPSILON)
+                            .unwrap_or_default();
+                            
+                            accumulated_rotations_for_normal_transformations[1] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
+                            
+                            updated_model_matrix = m4::multiply_mat(
+                                updated_model_matrix, 
+                                accumulated_rotations
+                            );
 
                             updated_model_matrix = m4::translate_3_d( 
                                 updated_model_matrix, 
@@ -460,20 +487,27 @@ impl Leg {
                             ////////// animations below
                             
                             // only side animations below
-                            let mut updated_model_matrix = m4::x_rotate_3_d(
+                            let mut accumulated_rotations = m4::multiply_mat(
+                                m4::x_rotation( deg_to_rad( self.base_x_acc_rotation ).into() ), 
+                                m4::y_rotation( deg_to_rad( self.base_y_acc_rotation ).into() )
+                            );
+
+                            accumulated_rotations = m4::multiply_mat(
+                                accumulated_rotations, 
+                                m4::z_rotation( deg_to_rad( self.base_z_acc_rotation ).into() )
+                            );
+
+                            let accumulated_rotations_from_decomposed = (
+                                r * Matrix4::from_column_slice(&accumulated_rotations)
+                            )
+                            .try_normalize(std::f32::EPSILON)
+                            .unwrap_or_default();
+                            
+                            accumulated_rotations_for_normal_transformations[2] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
+
+                            let updated_model_matrix = m4::x_rotate_3_d(
                                 original_transformation, 
-                                m4::x_rotation( deg_to_rad( self.base_x_acc_rotation ).into() ) 
-                            );
-
-                            updated_model_matrix = m4::y_rotate_3_d(
-                                updated_model_matrix, 
-                                m4::y_rotation( deg_to_rad( self.base_y_acc_rotation ).into() ) 
-                            );
-                            // only side animations above
-
-                            updated_model_matrix = m4::z_rotate_3_d(
-                                updated_model_matrix, 
-                                m4::z_rotation( deg_to_rad( self.base_z_acc_rotation ).into() ) 
+                                accumulated_rotations 
                             );
 
                             ////////// animations above
@@ -485,7 +519,7 @@ impl Leg {
                 }
             }  
 
-            return animation_models
+            return (animation_models, accumulated_rotations_for_normal_transformations)
 
         // BACK LEGS ////////////////////////////////
         } else if let LegType::Back = self.position {
@@ -511,7 +545,8 @@ impl Leg {
                     if !self.is_moving {
 
                         animation_models[0] = Some(original_transformation);
-                        animation_matrix_stack.push(original_transformation); 
+                        animation_matrix_stack.push(original_transformation);
+                        accumulated_rotations_for_normal_transformations[0] = Some(m4::identity()); 
 
                     } else {
                         match direction {
@@ -591,19 +626,25 @@ impl Leg {
                                 BACK_UPPER_LEG_DEPTH / 2.
                             )
                         );
-        
-                        updated_model_matrix = m4::z_rotate_3_d(
-                            updated_model_matrix, 
-                            m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation * -1. ).into() ) 
+                        
+                        let mut accumulated_rotations = m4::multiply_mat(
+                        m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation * -1. ).into() ), 
+                        m4::y_rotation( deg_to_rad( self.upper_y_acc_rotation ).into() )
                         );
 
-                        // only side animations below
-                        updated_model_matrix = m4::y_rotate_3_d(
+                        let accumulated_rotations_from_decomposed = (
+                            r * Matrix4::from_column_slice(&accumulated_rotations)
+                        )
+                        .try_normalize(std::f32::EPSILON)
+                        .unwrap_or_default();
+                        
+                        accumulated_rotations_for_normal_transformations[0] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
+
+                        updated_model_matrix = m4::multiply_mat(
                             updated_model_matrix, 
-                            m4::y_rotation( deg_to_rad( self.upper_y_acc_rotation ).into() ) 
-                        );
-                        // only side animations above
-        
+                            accumulated_rotations
+                        );    
+
                         updated_model_matrix = m4::translate_3_d( // here is the pivot point
                             updated_model_matrix, 
                             m4::translation( 
@@ -629,7 +670,8 @@ impl Leg {
 
                     if !self.is_moving {
                         animation_models[leg_part] = Some(original_transformation);
-                        animation_matrix_stack.push(original_transformation); 
+                        animation_matrix_stack.push(original_transformation);
+                        accumulated_rotations_for_normal_transformations[leg_part] = Some(m4::identity()); 
 
                         if leg_part == 2 {
                             animation_matrix_stack.drain(..);
@@ -713,24 +755,31 @@ impl Leg {
                                     BACK_JOINT_LEG_DEPTH / 2.
                                 )
                             );
-            
-                            updated_model_matrix = m4::z_rotate_3_d(
-                                updated_model_matrix, 
-                                m4::z_rotation( deg_to_rad( self.joint_z_acc_rotation * -1. ).into() ) 
+
+                            let mut accumulated_rotations = m4::multiply_mat(
+                                m4::z_rotation( deg_to_rad( self.joint_z_acc_rotation * -1. ).into() ), 
+                                m4::x_rotation( deg_to_rad( self.joint_x_acc_rotation ).into() )
+                            );
+                            
+                            accumulated_rotations = m4::multiply_mat(
+                                accumulated_rotations, 
+                                m4::y_rotation( deg_to_rad( self.joint_y_acc_rotation * -1. ).into() )
                             );
 
-                            // only side animations below
-                            updated_model_matrix = m4::x_rotate_3_d(
-                                updated_model_matrix, 
-                                m4::x_rotation( deg_to_rad( self.joint_x_acc_rotation ).into() ) 
-                            );
+                            let accumulated_rotations_from_decomposed = (
+                                r * Matrix4::from_column_slice(&accumulated_rotations)
+                            )
+                            .try_normalize(std::f32::EPSILON)
+                            .unwrap_or_default();
+                            
+                            accumulated_rotations_for_normal_transformations[1] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
 
-                            updated_model_matrix = m4::y_rotate_3_d(
-                                updated_model_matrix, 
-                                m4::y_rotation( deg_to_rad( self.joint_y_acc_rotation * -1. ).into() ) 
-                            );
                             //only side animations above
-            
+                            updated_model_matrix = m4::multiply_mat(
+                                updated_model_matrix, 
+                                accumulated_rotations
+                            );
+
                             updated_model_matrix = m4::translate_3_d( 
                                 updated_model_matrix, 
                                 m4::translation( 
@@ -803,17 +852,25 @@ impl Leg {
                             ////////// animations below
                             
                             // only side animations below
-                            let mut updated_model_matrix = m4::x_rotate_3_d(
-                                original_transformation, 
-                                m4::x_rotation( deg_to_rad( self.base_x_acc_rotation ).into() ) 
+                            let accumulated_rotations = m4::multiply_mat(
+                                m4::x_rotation( deg_to_rad( self.base_x_acc_rotation ).into() ), 
+                                m4::y_rotation( deg_to_rad( self.base_y_acc_rotation ).into() )
                             );
 
-                            updated_model_matrix = m4::y_rotate_3_d(
-                                updated_model_matrix, 
-                                m4::y_rotation( deg_to_rad( self.base_y_acc_rotation ).into() ) 
-                            );
+                            let accumulated_rotations_from_decomposed = (
+                                r * Matrix4::from_column_slice(&accumulated_rotations)
+                            )
+                            .try_normalize(std::f32::EPSILON)
+                            .unwrap_or_default();
+                            
+                            accumulated_rotations_for_normal_transformations[2] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
+
                             // only side animations above
-                    
+                            let updated_model_matrix = m4::multiply_mat(
+                                original_transformation, 
+                                accumulated_rotations
+                            );
+
                             ////////// animations above
                                                       
                             animation_models[2] = Some(updated_model_matrix);                         
@@ -845,7 +902,8 @@ impl Leg {
                     if !self.is_moving {
 
                         animation_models[0] = Some(original_transformation);
-                        animation_matrix_stack.push(original_transformation); 
+                        animation_matrix_stack.push(original_transformation);
+                        accumulated_rotations_for_normal_transformations[0] = Some(m4::identity()); 
 
                     } else {
                         match direction {
@@ -924,24 +982,31 @@ impl Leg {
                                 MIDDLE_JOINT_LEG_DEPTH / 2.
                             )
                         );
+
+                        let mut accumulated_rotations = m4::multiply_mat(
+                            m4::y_rotation( deg_to_rad( self.upper_y_acc_rotation ).into() ), 
+                            m4::x_rotation( deg_to_rad( self.upper_x_acc_rotation ).into() )
+                        );
+
+                        accumulated_rotations = m4::multiply_mat(
+                            accumulated_rotations, 
+                            m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation ).into() )
+                        );
+
+                        let accumulated_rotations_from_decomposed = (
+                            r * Matrix4::from_column_slice(&accumulated_rotations)
+                        )
+                        .try_normalize(std::f32::EPSILON)
+                        .unwrap_or_default();
+                        
+                        accumulated_rotations_for_normal_transformations[0] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
         
-                        updated_model_matrix = m4::y_rotate_3_d(
-                            updated_model_matrix, 
-                            m4::y_rotation( deg_to_rad( self.upper_y_acc_rotation ).into() ) 
-                        );
-
-                        updated_model_matrix = m4::x_rotate_3_d(
-                            updated_model_matrix, 
-                            m4::x_rotation( deg_to_rad( self.upper_x_acc_rotation ).into() ) 
-                        );
-
-                        // only side animations below
-                        updated_model_matrix = m4::z_rotate_3_d(
-                            updated_model_matrix, 
-                            m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation ).into() ) 
-                        );
                         // only side animation above
-        
+                        updated_model_matrix = m4::multiply_mat(
+                            updated_model_matrix, 
+                            accumulated_rotations
+                        ); 
+
                         updated_model_matrix = m4::translate_3_d( 
                             updated_model_matrix, 
                             m4::translation( 
@@ -968,6 +1033,7 @@ impl Leg {
                     if !self.is_moving {
                         animation_models[leg_part] = Some(original_transformation);
                         animation_matrix_stack.push(original_transformation); 
+                        accumulated_rotations_for_normal_transformations[leg_part] = Some(m4::identity());
 
                         if leg_part == 2 {
                             animation_matrix_stack.drain(..);
@@ -1016,9 +1082,22 @@ impl Leg {
                                 )
                             );
 
-                            updated_model_matrix = m4::z_rotate_3_d(
+                            let accumulated_rotations = m4::multiply_mat(
+                                m4::identity(),
+                                m4::z_rotation( deg_to_rad( self.joint_z_acc_rotation ).into() ), 
+                            );
+
+                            let accumulated_rotations_from_decomposed = (
+                                r * Matrix4::from_column_slice(&accumulated_rotations)
+                            )
+                            .try_normalize(std::f32::EPSILON)
+                            .unwrap_or_default();
+                            
+                            accumulated_rotations_for_normal_transformations[1] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
+
+                            updated_model_matrix = m4::multiply_mat(
                                 updated_model_matrix, 
-                                m4::z_rotation( deg_to_rad( self.joint_z_acc_rotation ).into() ) 
+                                accumulated_rotations 
                             );
 
                             updated_model_matrix = m4::translate_3_d(
@@ -1068,11 +1147,18 @@ impl Leg {
                                 },
                             }
 
-                            ////////// animations below
+                            let accumulated_rotations = m4::multiply_mat(
+                                m4::identity(), 
+                                r.
+                                try_normalize(std::f32::EPSILON)
+                                .unwrap_or_default()
+                                .as_slice()
+                                .try_into()
+                                .unwrap()
+                            );
                             
-                    
-                            ////////// animations above
-                                                      
+                            accumulated_rotations_for_normal_transformations[2] = Some( accumulated_rotations );
+                                                           
                             animation_models[2] = Some(original_transformation);                         
                             animation_matrix_stack.drain(..); 
                         }
@@ -1080,10 +1166,10 @@ impl Leg {
                 }
             } 
             
-            return animation_models
+            return (animation_models, accumulated_rotations_for_normal_transformations)
         }       
             
-        animation_models
+        (animation_models, accumulated_rotations_for_normal_transformations)
     }
 
     

@@ -11,7 +11,7 @@ use crate::{
     leg::Leg, 
     gpu_interface::GpuInterface, 
     m4::M4 as m4, 
-    webgl_utils::deg_to_rad
+    webgl_utils::deg_to_rad, log
 };
 
 
@@ -28,9 +28,9 @@ pub struct Spider {
     pub base_leg_colors: [u8; 54],
     pub body_colors: [u8; 270],
     pub body_data: [f32; 270],
-    body_normals: [i8; 270],
+    body_normals: [f32; 270],
     pub head_data: [f32; 270], // use body_colors
-    head_normals: [i8; 270],
+    head_normals: [f32; 270],
     pub speed: f32,
 
     // body data and positions
@@ -164,13 +164,11 @@ impl Spider {
         pre_matrix: &[f32; 16], 
         gpu_interface: &GpuInterface, 
         positions_buffer: &WebGlBuffer, 
-        colors_buffer: &WebGlBuffer,
         normals_buffer: &WebGlBuffer,
         light: &[f32; 3]
     ) -> [f32; 16] {
         
         gpu_interface.send_positions_to_gpu(&self.body_data, &positions_buffer);
-        //gpu_interface.send_colors_to_gpu(&self.body_colors, &colors_buffer);
         gpu_interface.send_normals_to_gpu(&self.body_normals, &normals_buffer);
 
         let mut x_acc_translation = 0.;
@@ -280,7 +278,9 @@ impl Spider {
             self.body_data.len() as i32 / 3, 
             Gl::TRIANGLES,
             &final_mat,
-            &light
+            &transformation_model_mat,
+            &light,
+            (0.08, 0.08, 0.08)
         );
         
         self.last_pos_model_mat = Option::Some(transformation_model_mat);
@@ -294,20 +294,18 @@ impl Spider {
         &GpuInterface, 
         body_model_matrix: &[f32; 16], 
         positions_buffer: &WebGlBuffer, 
-        colors_buffer: &WebGlBuffer,
         normals_buffer: &WebGlBuffer,
         light: &[f32; 3]
     ) {
         for (i, leg) in self.frontal_legs.iter_mut().enumerate() {   
             
-            let animation_model_matrices = leg.walk_animate(
+            let animation_model_matrix = leg.walk_animate(
                 &body_model_matrix, // reference
                 &self.control.direction.try_borrow().unwrap(),
                 i,
-                //&mut self.animation_matrix_stack
             );
 
-            for (j, model_matrix) in animation_model_matrices.iter().enumerate() {                
+            for (j, model_matrix) in animation_model_matrix.0.iter().enumerate() {                
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
                 
                 if i == 2 { // only for base leg 
@@ -322,7 +320,9 @@ impl Spider {
                     leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
                     &model_matrix.unwrap(),
-                    &light
+                    &animation_model_matrix.1[j].unwrap(), // unwrap never fails here,
+                    &light,
+                    (0.08, 0.08, 1.)
                 );
             }
             
@@ -334,7 +334,6 @@ impl Spider {
         gpu_interface: &GpuInterface, 
         body_model_matrix: &[f32; 16], 
         positions_buffer: &WebGlBuffer, 
-        colors_buffer: &WebGlBuffer,
         normals_buffer: &WebGlBuffer,
         light: &[f32; 3]
     ) {
@@ -347,7 +346,7 @@ impl Spider {
                 //&mut self.animation_matrix_stack
             );
             
-            for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
+            for (j, model_matrix) in animation_model_matrix.0.iter().enumerate() {                
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
                 
                 if i == 2 { // only for base leg 
@@ -362,7 +361,9 @@ impl Spider {
                     leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
                     &model_matrix.unwrap(),
-                    &light
+                    &animation_model_matrix.1[j].unwrap(), // unwrap never fails here,
+                    &light,
+                    (0.08, 0.08, 0.08)
                 );
             }            
         }
@@ -373,7 +374,6 @@ impl Spider {
         gpu_interface: &GpuInterface, 
         body_model_matrix: &[f32; 16], 
         positions_buffer: &WebGlBuffer, 
-        colors_buffer: &WebGlBuffer,
         normals_buffer: &WebGlBuffer,
         light: &[f32; 3]
     ) {
@@ -386,7 +386,7 @@ impl Spider {
                 //&mut self.animation_matrix_stack
             );
             
-            for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
+            for (j, model_matrix) in animation_model_matrix.0.iter().enumerate() {                
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
                 
                 if i == 2 { // only for base leg 
@@ -401,7 +401,9 @@ impl Spider {
                     leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
                     &model_matrix.unwrap(),
-                    &light
+                    &animation_model_matrix.1[j].unwrap(), // unwrap never fails here
+                    &light,
+                    (0.08, 0.08, 0.08)
                 );
             }            
         }

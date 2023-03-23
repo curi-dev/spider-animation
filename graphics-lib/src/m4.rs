@@ -42,6 +42,8 @@ impl M4 {
     }
 
     pub fn translate_3_d(pre_matrix: [f32; 16], translation_mat: [f32; 16]) -> [f32; 16] {
+        log(&format!("trying to change the file!"));
+        
         M4::multiply_mat(pre_matrix, translation_mat)  
     }
 

@@ -460,6 +460,10 @@ export function __wbg_shaderSource_a0001b8eab5d44f4(arg0, arg1, arg2, arg3) {
     getObject(arg0).shaderSource(getObject(arg1), getStringFromWasm0(arg2, arg3));
 };
 
+export function __wbg_uniform4f_5b62a0acebac4494(arg0, arg1, arg2, arg3, arg4, arg5) {
+    getObject(arg0).uniform4f(getObject(arg1), arg2, arg3, arg4, arg5);
+};
+
 export function __wbg_useProgram_156511a425feb519(arg0, arg1) {
     getObject(arg0).useProgram(getObject(arg1));
 };
@@ -506,16 +510,6 @@ export function __wbg_global_ba75c50d1cf384f4() { return handleError(function ()
     const ret = global.global;
     return addHeapObject(ret);
 }, arguments) };
-
-export function __wbg_new_8c3f0052272a457a(arg0) {
-    const ret = new Uint8Array(getObject(arg0));
-    return addHeapObject(ret);
-};
-
-export function __wbg_subarray_58ad4efbb5bcb886(arg0, arg1, arg2) {
-    const ret = getObject(arg0).subarray(arg1 >>> 0, arg2 >>> 0);
-    return addHeapObject(ret);
-};
 
 export function __wbg_new_4d6520efe4ca3e24(arg0) {
     const ret = new Float32Array(getObject(arg0));
@@ -595,7 +589,7 @@ export function __wbindgen_memory() {
     return addHeapObject(ret);
 };
 
-export function __wbindgen_closure_wrapper225(arg0, arg1, arg2) {
+export function __wbindgen_closure_wrapper339(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 15, __wbg_adapter_16);
     return addHeapObject(ret);
 };

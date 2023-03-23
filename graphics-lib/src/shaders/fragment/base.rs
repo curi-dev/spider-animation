@@ -9,10 +9,10 @@ pub const SHADER: &str = r#"
     void main() {
         vec3 normal = normalize(vNormal); // why normalize that (interpolation?)
 
-        float light = dot(normal, uReverseLight); // why not normalize uReverseLightDirection?
+        float light = dot(normal, uReverseLight); 
 
         gl_FragColor = uColor;
 
-        gl_FragColor.rgb *= light; // light is a scalar value
+        gl_FragColor.rgb *= light; 
     }
 "#;

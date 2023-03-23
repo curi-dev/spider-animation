@@ -124,18 +124,17 @@ impl GraphicsClient {
                 .try_into()
                 .unwrap()
         );
-
-    
+  
         // when using rust and webgl together, rust is used for data manipulation and
         // calculation, while webgl is used for rendering and displaying the data on the
         // client-side. this buffer is not being persisted on rust's layout memory, but rather
         // in the graphics card's memory on the client-side
         let positions_buffer = self.gpu_interface.gl.create_buffer().unwrap();  
-        let colors_buffer = self.gpu_interface.gl.create_buffer().unwrap(); 
         let normals_buffer = self.gpu_interface.gl.create_buffer().unwrap();
 
-        // light setup (create a light class)
-        let light_coord_equals_camera_position = self.camera.curr_updated_vertex_position();
+        // light setup (create a light struct)
+        //let light_coords_equals_camera_position = self.camera.curr_updated_vertex_position();
+        let light_coords_equals_camera_position = [0., 50., 20.];
         // light setup
 
         // floor below (can turn into a entity)
@@ -144,53 +143,49 @@ impl GraphicsClient {
         self.gpu_interface.send_normals_to_gpu(&get_floor_normals(), &normals_buffer);
         //self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
 
+        let r = 1. / 255. * 15.;
+        let g = 1. / 255. * 45.;
+        let b = 1. / 255. * 10.;
         self.gpu_interface.consume_data(
             floor_data.len() as i32 / 3, 
             Gl::TRIANGLES,
             &view_projection_mat,
-            &light_coord_equals_camera_position
+            &m4::M4::identity(),
+            &light_coords_equals_camera_position,
+            (r, g, b)
         );
         // floor above
 
-        // let mut body_model_matrix = M4::x_rotate_3_d(
-        //     view_projection_mat,
-        //     M4::y_rotation( deg_to_rad( -60. ).into() )
-        // );
-
         let body_model_matrix = self.spider.animate_body(
-            &view_projection_mat, // no rotation anymore
+            &view_projection_mat, 
             &self.gpu_interface,  
             &positions_buffer, 
-            &colors_buffer,
             &normals_buffer,
-            &light_coord_equals_camera_position
+            &light_coords_equals_camera_position
         );
 
         self.spider.animate_front_legs(
             &self.gpu_interface, 
             &body_model_matrix, 
             &positions_buffer, 
-            &colors_buffer,
             &normals_buffer,
-            &light_coord_equals_camera_position
+            &light_coords_equals_camera_position
         );
 
         self.spider.animate_back_legs(
             &self.gpu_interface, 
             &body_model_matrix, 
             &positions_buffer, 
-            &colors_buffer,
             &normals_buffer,
-            &light_coord_equals_camera_position
+            &light_coords_equals_camera_position
         );
         
         self.spider.animate_middle_legs(
             &self.gpu_interface, 
             &body_model_matrix, 
             &positions_buffer, 
-            &colors_buffer,
             &normals_buffer,
-            &light_coord_equals_camera_position
+            &light_coords_equals_camera_position
         );
 
         // head below
@@ -209,8 +204,10 @@ impl GraphicsClient {
         self.gpu_interface.consume_data(
             self.spider.head_data.len() as i32 / 3, 
             Gl::TRIANGLES, 
-            &head_model_matrix,
-            &light_coord_equals_camera_position
+            &head_model_matrix, // D.R.Y
+            &head_model_matrix, // D.R.Y
+            &light_coords_equals_camera_position,
+            (0.08, 0.08, 0.08)
         );
         // head above
     
