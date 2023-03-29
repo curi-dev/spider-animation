@@ -1,10 +1,7 @@
-use crate::log;
-
-
 pub struct M4 {}
 
 impl M4 {
-    pub fn projection(width: f32, height: f32, depth: f32) -> [f32; 16] {
+    pub fn _projection(width: f32, height: f32, depth: f32) -> [f32; 16] {
         let projection_mat = [
             2. / width, 0., 0., 0.,
             0., 2. / height, 0., 0.,
@@ -16,7 +13,7 @@ impl M4 {
         projection_mat
     }
 
-    pub fn perspective(field_of_view_in_radians: f32, aspect: f32, near: f32, far: f32) -> [f32; 16] {
+    pub fn _perspective(field_of_view_in_radians: f32, aspect: f32, near: f32, far: f32) -> [f32; 16] {
         let f = ((3.14 * 0.5 - 0.5 * field_of_view_in_radians) as f64).tan();
         let range_inv = 1. / (near - far);
 
@@ -41,9 +38,7 @@ impl M4 {
         identity_mat
     }
 
-    pub fn translate_3_d(pre_matrix: [f32; 16], translation_mat: [f32; 16]) -> [f32; 16] {
-        log(&format!("trying to change the file!"));
-        
+    pub fn translate_3_d(pre_matrix: [f32; 16], translation_mat: [f32; 16]) -> [f32; 16] {   
         M4::multiply_mat(pre_matrix, translation_mat)  
     }
 
@@ -58,11 +53,11 @@ impl M4 {
         translation_mat
     }
 
-    pub fn scale_3_d(pre_matrix: [f32; 16], scale_mat: [f32; 16]) -> [f32; 16] {
+    pub fn _scale_3_d(pre_matrix: [f32; 16], scale_mat: [f32; 16]) -> [f32; 16] {
         M4::multiply_mat(pre_matrix, scale_mat)
     }
 
-    pub fn scaling(sx: f32, sy: f32, sz: f32) -> [f32; 16] {
+    pub fn _scaling(sx: f32, sy: f32, sz: f32) -> [f32; 16] {
         let scale_mat = [
             sx, 0.,  0.,  0.,
             0., sy,  0.,  0.,
@@ -186,7 +181,6 @@ impl M4 {
     }
 
     pub fn multiply_mat(mat_a: [f32; 16], mat_b: [f32; 16]) -> [f32; 16] {
-        log(&format!("multiply_mat INSIDE: {:?} ", mat_a));
         let b00 = mat_b[0 * 4 + 0];
         let b01 = mat_b[0 * 4 + 1];
         let b02 = mat_b[0 * 4 + 2];

@@ -130,9 +130,6 @@ pub enum Move {
     SpinUp,
     SpinDown,
     Static,
-    ZoomOut,
-    ZoomIn,
-    Jump
 }
 pub struct SpiderControl{
     pub is_active: bool,
@@ -174,13 +171,6 @@ impl SpiderControl {
                 *keydown_direction.borrow_mut() = Move::SpinDown;
             }
 
-            if key_code == 32 {
-                *keydown_direction.borrow_mut() = Move::ZoomIn;
-            }
-
-            if key_code == 13 {
-                *keydown_direction.borrow_mut() = Move::ZoomOut;
-            }
         }) as Box<dyn FnMut(_)>);
 
         let keyup_closure = Closure::wrap(Box::new(move // move to events module (?)
@@ -207,14 +197,6 @@ impl SpiderControl {
             }
 
             if key_code == 88 {
-                *keyup_direction.borrow_mut() = Move::Static;
-            }
-
-            if key_code == 32 {
-                *keyup_direction.borrow_mut() = Move::Static;
-            }
-
-            if key_code == 13 {
                 *keyup_direction.borrow_mut() = Move::Static;
             }
         }) as Box<dyn FnMut(_)>);

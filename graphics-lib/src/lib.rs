@@ -65,7 +65,7 @@ impl GraphicsClient {
 
         let gpu_interface = GpuInterface::new(gl, &program);
 
-        let camera = Camera::new(0., 0., 100., &canvas);
+        let camera = Camera::new(35., 35., 100., &canvas);
 
         Self {
             spider:Spider::new(&canvas),
@@ -101,7 +101,7 @@ impl GraphicsClient {
             nalgebra::Vector3::new(0., 1., 0.)
         );
 
-        let view_mat = nalgebra::Matrix4::from_column_slice(
+        let camera_matrix = nalgebra::Matrix4::from_column_slice(
             &look_at
             )
             .try_inverse()
@@ -113,13 +113,13 @@ impl GraphicsClient {
             DEFAULT_Z_NEAR, 
             DEFAULT_Z_FAR
         );
-        let view_projection_mat = M4::multiply_mat(
+        let camera_projection_matrix = M4::multiply_mat(
             projection_mat
                 .to_homogeneous()
                 .as_slice()
                 .try_into()
                 .unwrap(), 
-            view_mat
+            camera_matrix
                 .as_slice()
                 .try_into()
                 .unwrap()
@@ -129,47 +129,45 @@ impl GraphicsClient {
         // calculation, while webgl is used for rendering and displaying the data on the
         // client-side. this buffer is not being persisted on rust's layout memory, but rather
         // in the graphics card's memory on the client-side
+        
         let positions_buffer = self.gpu_interface.gl.create_buffer().unwrap();  
         let normals_buffer = self.gpu_interface.gl.create_buffer().unwrap();
 
-        // light setup (create a light struct)
-        //let light_coords_equals_camera_position = self.camera.curr_updated_vertex_position();
-        let light_coords_equals_camera_position = [0., 50., 20.];
-        // light setup
-
-        // floor below (can turn into a entity)
+        // directional light setup
+        let light_position = [0., 200., 0.];
+        
+        // floor below (turn into entity?)
         let floor_data = get_floor_data();
         self.gpu_interface.send_positions_to_gpu(&floor_data, &positions_buffer);
         self.gpu_interface.send_normals_to_gpu(&get_floor_normals(), &normals_buffer);
-        //self.gpu_interface.send_colors_to_gpu(&self.spider.body_colors, &colors_buffer);
-
+        
         let r = 1. / 255. * 15.;
         let g = 1. / 255. * 45.;
         let b = 1. / 255. * 10.;
         self.gpu_interface.consume_data(
             floor_data.len() as i32 / 3, 
             Gl::TRIANGLES,
-            &view_projection_mat,
+            &camera_projection_matrix,
             &m4::M4::identity(),
-            &light_coords_equals_camera_position,
+            &light_position, // singleton
             (r, g, b)
         );
         // floor above
 
         let body_model_matrix = self.spider.animate_body(
-            &view_projection_mat, 
+            &camera_projection_matrix, 
             &self.gpu_interface,  
             &positions_buffer, 
             &normals_buffer,
-            &light_coords_equals_camera_position
+            &light_position // singleton
         );
 
         self.spider.animate_front_legs(
             &self.gpu_interface, 
-            &body_model_matrix, 
+            &body_model_matrix, // camera + projection + body move (translation and rotation)
             &positions_buffer, 
             &normals_buffer,
-            &light_coords_equals_camera_position
+            &light_position // singleton
         );
 
         self.spider.animate_back_legs(
@@ -177,7 +175,7 @@ impl GraphicsClient {
             &body_model_matrix, 
             &positions_buffer, 
             &normals_buffer,
-            &light_coords_equals_camera_position
+            &light_position // singleton
         );
         
         self.spider.animate_middle_legs(
@@ -185,7 +183,7 @@ impl GraphicsClient {
             &body_model_matrix, 
             &positions_buffer, 
             &normals_buffer,
-            &light_coords_equals_camera_position
+            &light_position // singleton
         );
 
         // head below
@@ -206,10 +204,15 @@ impl GraphicsClient {
             Gl::TRIANGLES, 
             &head_model_matrix, // D.R.Y
             &head_model_matrix, // D.R.Y
-            &light_coords_equals_camera_position,
+            &light_position,
             (0.08, 0.08, 0.08)
         );
         // head above
+
+        // delete the buffers stored on gpu card [is that really necessary?]
+        // store a pointer to the buffer on rust's memory (?)
+        self.gpu_interface.gl.delete_buffer(Some(&positions_buffer));
+        self.gpu_interface.gl.delete_buffer(Some(&normals_buffer));
     
     }
 }

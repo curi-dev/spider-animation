@@ -9,10 +9,8 @@ pub const SHADER: &str = r#"
 
     void main() {
         gl_Position = uMatrix * aPosition;
-
-        vec3 updatedNormal = mat3(uNormalMatrix) * aNormal;
-
-        vNormal = updatedNormal;
+    
+        vNormal = mat3(uNormalMatrix) * aNormal;
     }
 "#;
 

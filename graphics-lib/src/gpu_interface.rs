@@ -3,6 +3,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{WebGlUniformLocation, WebGlProgram, WebGlRenderingContext, WebGlBuffer};
 use web_sys::WebGlRenderingContext as Gl;
 
+use crate::log;
+
 //use crate::log;
 
 pub struct GpuInterface {
@@ -94,7 +96,7 @@ impl GpuInterface {
         &self, vert_count: i32, 
         mode: u32, 
         model_matrix: &[f32; 16],
-        normal_matrix: &[f32; 16],
+        normal_matrix: &[f32],
         light: &[f32; 3],
         color: (f32, f32, f32)
     ) {
@@ -104,6 +106,7 @@ impl GpuInterface {
         self.gl.uniform4f(Some(&self.u_color), color.0, color.1, color.2, 1.);
 
         let normalized_light = nalgebra::Vector3::new(light[0], light[1], light[2]).normalize();
+        log(&format!("normalized light: {:?} ", normalized_light));
         self.gl.uniform3fv_with_f32_array(Some(&self.u_reverse_light), &normalized_light.as_slice()); // understand this concept of reverse light
         
         self.gl.draw_arrays(mode, 0, vert_count);

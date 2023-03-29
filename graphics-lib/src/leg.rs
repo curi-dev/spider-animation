@@ -1,5 +1,4 @@
 use std::ops::Range;
-use nalgebra::{SVD, Matrix4};
 
 use crate::{
     spider::LegType, 
@@ -128,28 +127,21 @@ impl Leg {
 
     pub fn walk_animate(
         &mut self, 
-        pre_matrix: &[f32; 16], 
+        pre_matrix: &[f32; 16], // camera + projection + body move (translation and rotation)
         direction: &Move, 
         leg_i: usize,
+        updated_body_transformation: &[f32; 16]
     ) -> ([Option<[f32; 16]>; 3], [Option<[f32; 16]>; 3]) {
 
-
         let mut animation_models: [Option<[f32; 16]>; 3] = [None; 3];
-        let mut accumulated_rotations_for_normal_transformations: [Option<[f32; 16]>; 3] = [None; 3];
+
+        // change the name of this variable
+        let mut accumulated_rotations_update_normal_orientation: [Option<[f32; 16]>; 3] = [None; 3];
+        
         let mut animation_matrix_stack = Vec::new();
 
-        // here i will extract only the rotation from the pre_matrix 
-        let converted_pre_matrix = nalgebra::Matrix4::from_column_slice(pre_matrix);
-        let svd = SVD::new(converted_pre_matrix, true, true);
-       
-        let r = svd.u.unwrap() * svd.v_t.unwrap().transpose();
-
-        //let pre_matrix_rotation_matrix = r.try_normalize(std::f32::EPSILON).unwrap_or_default();
-        //let pre_matrix_rotation_matrix_slice: [f32; 16] = pre_matrix_rotation_matrix.as_slice().try_into().unwrap();
-        
         if let LegType::Frontal = self.position {
-            println!("is frontal leg");
-
+        
             for leg_part in 0..3 { // make it more semanthic
                 
                 if leg_part == 0 { // upper part
@@ -169,12 +161,33 @@ impl Leg {
                         leg_i 
                     );
 
-                    if !self.is_moving {
+                    let raw_original_transformation = self.get_frontal_leg_transformation(
+                        m4::identity(), 
+                        leg_part, 
+                        leg_i 
+                    );
+
+                    if !self.is_moving { // this can be a problem (what if i stop a leg, it resets my normals?)
 
                         animation_models[0] = Some(original_transformation);
                         animation_matrix_stack.push(original_transformation); 
-                        accumulated_rotations_for_normal_transformations[0] = Some(m4::identity());
 
+
+                        // math for updating the normals
+                        let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                            &original_transformation
+                        )
+                        .try_inverse()
+                        .unwrap()
+                        .transpose();
+
+                        accumulated_rotations_update_normal_orientation[0] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                        // math for updating the normals
+                        
+                        // accumulated_rotations_update_normal_orientation[0] = Some(m4::multiply_mat(
+                        //     m4::identity(), 
+                        //     raw_original_transformation
+                        // ));
                     } else {
                         match direction {
                             Move::Forward => {
@@ -221,9 +234,6 @@ impl Leg {
                                     self.switch_upper_side_y_move_cycle();                                
                                 }                  
                             },
-                            Move::Jump => {
-                                println!("move jump!");
-                            },
                             Move::Static => {
                                 println!("no move!");
                             },
@@ -233,16 +243,9 @@ impl Leg {
                             Move::SpinUp => {
                                 println!("move spinup");
                             },
-                            Move::ZoomOut => {
-                                println!("move zoomout")
-                            },
-                            Move::ZoomIn => {
-                                println!("move zoomin")
-                            },
                         }
-    
-                        ////////// animations below
-                        let mut updated_model_matrix = m4::translate_3_d( // here is the pivot point
+
+                        let mut updated_model_matrix = m4::translate_3_d( 
                             original_transformation,
                             m4::translation( 
                                 FRONTAL_UPPER_LEG_WIDTH, 
@@ -250,22 +253,22 @@ impl Leg {
                                 FRONTAL_UPPER_LEG_DEPTH / 2.
                             )
                         );
-
-                        // the accumulate rotations are necessary to transform the normals
+                    
                         let accumulated_rotations = m4::multiply_mat(
                             m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation * -1. ).into() ), 
                             m4::y_rotation( deg_to_rad( self.upper_y_acc_rotation ).into() )
                         );
 
-                        let accumulated_rotations_from_decomposed = (
-                            r * Matrix4::from_column_slice(&accumulated_rotations)
-                        )
-                        .try_normalize(std::f32::EPSILON)
-                        .unwrap_or_default();
+                        // math for updating normals
+                        // let accumulated_rotations_from_rotated_body = m4::multiply_mat(
+                        //     *updated_body_transformation,
+                        //     m4::multiply_mat(raw_original_transformation, accumulated_rotations) 
+                        // );
                         
-                        accumulated_rotations_for_normal_transformations[0] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
-                        
-                        updated_model_matrix = m4::multiply_mat(
+                        //accumulated_rotations_update_normal_orientation[0] = Some( accumulated_rotations_from_rotated_body );
+                        // math for updating normals
+
+                        updated_model_matrix = m4::multiply_mat( // starts here
                             updated_model_matrix, 
                             accumulated_rotations
                         );
@@ -279,8 +282,22 @@ impl Leg {
                             )
                         );
 
-                        ////////// animations above
-                        
+                        // math for updating the normals
+                        let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                            &updated_model_matrix
+                        )
+                        .try_inverse()
+                        .unwrap()
+                        .transpose()
+                        .normalize();
+
+                        let inv_transpose_for_normal_transformation_as_slice = inv_transpose_for_normal_transformation.as_slice();
+                       
+                        log(&format!("inv transpose for normal transformation: {:?} ", inv_transpose_for_normal_transformation_as_slice));
+
+                        accumulated_rotations_update_normal_orientation[0] = Some( inv_transpose_for_normal_transformation_as_slice.try_into().unwrap() );
+                        // math for updating the normals
+
                         self.upper_last_pos_model_mat = Some(updated_model_matrix);
                         animation_models[0] = Some(updated_model_matrix); 
                         animation_matrix_stack.push(updated_model_matrix); 
@@ -295,10 +312,32 @@ impl Leg {
                         leg_i 
                     );
 
+                    let raw_original_transformation = self.get_middle_leg_transformation(
+                        m4::identity(), 
+                        leg_part, 
+                        leg_i 
+                    );
+
                     if !self.is_moving {
+
                         animation_models[leg_part] = Some(original_transformation);
                         animation_matrix_stack.push(original_transformation);
-                        accumulated_rotations_for_normal_transformations[leg_part] = Some(m4::identity()); 
+                        
+                        // accumulated_rotations_update_normal_orientation[leg_part] = Some(m4::multiply_mat(
+                        //     m4::identity(), 
+                        //     raw_original_transformation
+                        // ));
+
+                        // math for updating the normals
+                        let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                            &original_transformation
+                        )
+                        .try_inverse()
+                        .unwrap()
+                        .transpose();
+
+                        accumulated_rotations_update_normal_orientation[leg_part] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                        // math for updating the normals
 
                         if leg_part == 2 {
                             animation_matrix_stack.drain(..);
@@ -349,9 +388,6 @@ impl Leg {
                                     self.joint_x_acc_rotation += rotation_x; 
                                     self.joint_y_acc_rotation += rotation_y; 
                                 },
-                                Move::Jump => {
-                                    println!("move jump!");
-                                },
                                 Move::Static => {
                                     println!("no move!");
                                 },
@@ -361,15 +397,8 @@ impl Leg {
                                 Move::SpinUp => {
                                     println!("move spinup");
                                 },
-                                Move::ZoomOut => {
-                                    println!("move zoomout")
-                                },
-                                Move::ZoomIn => {
-                                    println!("move zoomin")
-                                },
                             }
                             
-                            ////////// animations below
                             let mut updated_model_matrix = m4::translate_3_d( 
                                 original_transformation, 
                                 m4::translation( 
@@ -379,7 +408,6 @@ impl Leg {
                                 )
                             );
 
-                            // only side animations below
                             let mut accumulated_rotations = m4::multiply_mat(
                                 m4::x_rotation( deg_to_rad( self.joint_x_acc_rotation ).into() ), 
                                 m4::y_rotation( deg_to_rad( self.joint_y_acc_rotation * -1. ).into() ) 
@@ -390,14 +418,15 @@ impl Leg {
                                 m4::z_rotation( deg_to_rad( self.joint_z_acc_rotation ).into() ) 
                             );
 
-                            let accumulated_rotations_from_decomposed = (
-                                r * Matrix4::from_column_slice(&accumulated_rotations)
-                            )
-                            .try_normalize(std::f32::EPSILON)
-                            .unwrap_or_default();
+                            // math for updating normals
+                            // let accumulated_rotations_from_rotated_body = m4::multiply_mat(
+                            //     *updated_body_transformation,
+                            //     m4::multiply_mat(raw_original_transformation, accumulated_rotations) 
+                            // );
                             
-                            accumulated_rotations_for_normal_transformations[1] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
-                            
+                            // accumulated_rotations_update_normal_orientation[1] = Some( accumulated_rotations_from_rotated_body );
+                            // math for updating normals
+                                            
                             updated_model_matrix = m4::multiply_mat(
                                 updated_model_matrix, 
                                 accumulated_rotations
@@ -411,7 +440,17 @@ impl Leg {
                                     (FRONTAL_JOINT_LEG_DEPTH / 2.) * -1.
                                 )
                             );
-                            ////////// animations above
+
+                            // math for updating the normals
+                            let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                                &updated_model_matrix
+                            )
+                            .try_inverse()
+                            .unwrap()
+                            .transpose();
+
+                            accumulated_rotations_update_normal_orientation[1] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                            // math for updating the normals
                          
                             animation_models[1] = Some(updated_model_matrix);
                             animation_matrix_stack.push(updated_model_matrix); 
@@ -464,9 +503,6 @@ impl Leg {
                                     self.base_x_acc_rotation += rotation_x;  
                                     self.base_y_acc_rotation = rotation_y;
                                 },
-                                Move::Jump => {
-                                    println!("move jump!");
-                                },
                                 Move::Static => {
                                     println!("no move!");
                                 },
@@ -476,17 +512,8 @@ impl Leg {
                                 Move::SpinUp => {
                                     println!("move spinup");
                                 },
-                                Move::ZoomOut => {
-                                    println!("move zoomout")
-                                },
-                                Move::ZoomIn => {
-                                    println!("move zoomin")
-                                },
                             }
 
-                            ////////// animations below
-                            
-                            // only side animations below
                             let mut accumulated_rotations = m4::multiply_mat(
                                 m4::x_rotation( deg_to_rad( self.base_x_acc_rotation ).into() ), 
                                 m4::y_rotation( deg_to_rad( self.base_y_acc_rotation ).into() )
@@ -497,21 +524,31 @@ impl Leg {
                                 m4::z_rotation( deg_to_rad( self.base_z_acc_rotation ).into() )
                             );
 
-                            let accumulated_rotations_from_decomposed = (
-                                r * Matrix4::from_column_slice(&accumulated_rotations)
-                            )
-                            .try_normalize(std::f32::EPSILON)
-                            .unwrap_or_default();
+                            // math for updating normals
+                            // let accumulated_rotations_from_rotated_body = m4::multiply_mat(
+                            //     *updated_body_transformation,
+                            //     m4::multiply_mat(raw_original_transformation, accumulated_rotations) 
+                            // );
                             
-                            accumulated_rotations_for_normal_transformations[2] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
+                            // accumulated_rotations_update_normal_orientation[2] = Some( accumulated_rotations_from_rotated_body );
+                            // math for updating normals
 
                             let updated_model_matrix = m4::x_rotate_3_d(
                                 original_transformation, 
                                 accumulated_rotations 
                             );
 
-                            ////////// animations above
-                                                      
+                            // math for updating the normals
+                            let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                                &updated_model_matrix
+                            )
+                            .try_inverse()
+                            .unwrap()
+                            .transpose();
+
+                            accumulated_rotations_update_normal_orientation[2] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                            // math for updating the normals
+                                  
                             animation_models[2] = Some(updated_model_matrix);                         
                             animation_matrix_stack.drain(..); 
                         }
@@ -519,7 +556,7 @@ impl Leg {
                 }
             }  
 
-            return (animation_models, accumulated_rotations_for_normal_transformations)
+            return (animation_models, accumulated_rotations_update_normal_orientation)
 
         // BACK LEGS ////////////////////////////////
         } else if let LegType::Back = self.position {
@@ -542,12 +579,32 @@ impl Leg {
                         leg_i 
                     );
 
+                    let raw_original_transformation = self.get_back_leg_transformation(
+                        m4::identity(), 
+                        leg_part, 
+                        leg_i 
+                    );
+
                     if !self.is_moving {
 
                         animation_models[0] = Some(original_transformation);
                         animation_matrix_stack.push(original_transformation);
-                        accumulated_rotations_for_normal_transformations[0] = Some(m4::identity()); 
+                        
+                        // accumulated_rotations_update_normal_orientation[0] = Some(m4::multiply_mat(
+                        //     m4::identity(), 
+                        //     raw_original_transformation
+                        // ));
 
+                        // math for updating the normals
+                        let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                            &original_transformation
+                        )
+                        .try_inverse()
+                        .unwrap()
+                        .transpose();
+
+                        accumulated_rotations_update_normal_orientation[0] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                        // math for updating the normals
                     } else {
                         match direction {
                             Move::Forward => {
@@ -597,9 +654,6 @@ impl Leg {
                                     self.switch_upper_side_y_move_cycle();                                
                                 }                  
                             },
-                            Move::Jump => {
-                                println!("move jump!");
-                            },
                             Move::Static => {
                                 println!("no move!");
                             },
@@ -609,15 +663,8 @@ impl Leg {
                             Move::SpinUp => {
                                 println!("move spinup");
                             },
-                            Move::ZoomOut => {
-                                println!("move zoomout")
-                            },
-                            Move::ZoomIn => {
-                                println!("move zoomin")
-                            },
                         }
     
-                        ////////// animations below
                         let mut updated_model_matrix = m4::translate_3_d( // here is the pivot point
                             original_transformation, 
                             m4::translation( 
@@ -627,33 +674,42 @@ impl Leg {
                             )
                         );
                         
-                        let mut accumulated_rotations = m4::multiply_mat(
+                        let accumulated_rotations = m4::multiply_mat(
                         m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation * -1. ).into() ), 
                         m4::y_rotation( deg_to_rad( self.upper_y_acc_rotation ).into() )
                         );
 
-                        let accumulated_rotations_from_decomposed = (
-                            r * Matrix4::from_column_slice(&accumulated_rotations)
-                        )
-                        .try_normalize(std::f32::EPSILON)
-                        .unwrap_or_default();
+                        // let accumulated_rotations_from_rotated_body = m4::multiply_mat(
+                        //     *updated_body_transformation,
+                        //     m4::multiply_mat(raw_original_transformation, accumulated_rotations) 
+                        // );
                         
-                        accumulated_rotations_for_normal_transformations[0] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
-
+                        //accumulated_rotations_update_normal_orientation[0] = Some( accumulated_rotations_from_rotated_body );
+                        
                         updated_model_matrix = m4::multiply_mat(
                             updated_model_matrix, 
                             accumulated_rotations
                         );    
 
-                        updated_model_matrix = m4::translate_3_d( // here is the pivot point
+                        updated_model_matrix = m4::translate_3_d( 
                             updated_model_matrix, 
                             m4::translation( 
                                 - BACK_UPPER_LEG_WIDTH, 
                                 (BACK_UPPER_LEG_BIG_HEIGHT / 2.) * -1.,
                                 (BACK_UPPER_LEG_DEPTH / 2.) * -1.
                             )
-                        );   
-                        ////////// animations above
+                        );
+
+                        // math for updating the normals
+                        let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                            &updated_model_matrix
+                        )
+                        .try_inverse()
+                        .unwrap()
+                        .transpose();
+
+                        accumulated_rotations_update_normal_orientation[0] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                        // math for updating the normals   
                      
                         animation_models[0] = Some(updated_model_matrix); 
                         animation_matrix_stack.push(updated_model_matrix); 
@@ -668,14 +724,36 @@ impl Leg {
                         leg_i 
                     );
 
+                    let raw_original_transformation = self.get_back_leg_transformation(
+                        m4::identity(), 
+                        leg_part, 
+                        leg_i 
+                    );
+
                     if !self.is_moving {
                         animation_models[leg_part] = Some(original_transformation);
                         animation_matrix_stack.push(original_transformation);
-                        accumulated_rotations_for_normal_transformations[leg_part] = Some(m4::identity()); 
+                        
+                        // accumulated_rotations_update_normal_orientation[leg_part] = Some(m4::multiply_mat(
+                        //     m4::identity(), 
+                        //     raw_original_transformation
+                        // ));
+
+                        // math for updating the normals
+                        let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                            &original_transformation
+                        )
+                        .try_inverse()
+                        .unwrap()
+                        .transpose();
+
+                        accumulated_rotations_update_normal_orientation[leg_part] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                        // math for updating the normals
 
                         if leg_part == 2 {
                             animation_matrix_stack.drain(..);
                         }
+
                     } else {
                         if leg_part == 1 { // joint
                             match direction {
@@ -726,9 +804,6 @@ impl Leg {
                                     self.joint_x_acc_rotation += rotation_x; 
                                     self.joint_y_acc_rotation += rotation_y; 
                                 },
-                                Move::Jump => {
-                                    println!("move jump!");
-                                },
                                 Move::Static => {
                                     println!("no move!");
                                 },
@@ -738,15 +813,8 @@ impl Leg {
                                 Move::SpinUp => {
                                     println!("move spinup");
                                 },
-                                Move::ZoomOut => {
-                                    println!("move zoomout")
-                                },
-                                Move::ZoomIn => {
-                                    println!("move zoomin")
-                                },
                             }
                             
-                            ////////// animations below
                             let mut updated_model_matrix = m4::translate_3_d( 
                                 original_transformation, 
                                 m4::translation( 
@@ -766,15 +834,15 @@ impl Leg {
                                 m4::y_rotation( deg_to_rad( self.joint_y_acc_rotation * -1. ).into() )
                             );
 
-                            let accumulated_rotations_from_decomposed = (
-                                r * Matrix4::from_column_slice(&accumulated_rotations)
-                            )
-                            .try_normalize(std::f32::EPSILON)
-                            .unwrap_or_default();
+                            // math for update normals
+                            // let accumulated_rotations_from_rotated_body = m4::multiply_mat(
+                            //     *updated_body_transformation,
+                            //     m4::multiply_mat(raw_original_transformation, accumulated_rotations) 
+                            // );
                             
-                            accumulated_rotations_for_normal_transformations[1] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
+                            // accumulated_rotations_update_normal_orientation[1] = Some( accumulated_rotations_from_rotated_body );
+                            // math for update normals
 
-                            //only side animations above
                             updated_model_matrix = m4::multiply_mat(
                                 updated_model_matrix, 
                                 accumulated_rotations
@@ -788,7 +856,17 @@ impl Leg {
                                     (BACK_JOINT_LEG_DEPTH / 2.) * -1.
                                 )
                             );
-                            ////////// animations above
+
+                            // math for updating the normals
+                            let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                                &updated_model_matrix
+                            )
+                            .try_inverse()
+                            .unwrap()
+                            .transpose();
+
+                            accumulated_rotations_update_normal_orientation[1] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                            // math for updating the normals
                          
                             animation_models[1] = Some(updated_model_matrix);
                             animation_matrix_stack.push(updated_model_matrix); 
@@ -829,9 +907,6 @@ impl Leg {
                                     self.base_x_acc_rotation += rotation_x;  
                                     self.base_y_acc_rotation = rotation_y;
                                 },
-                                Move::Jump => {
-                                    println!("move jump!");
-                                },
                                 Move::Static => {
                                     println!("no move!");
                                 },
@@ -841,38 +916,38 @@ impl Leg {
                                 Move::SpinUp => {
                                     println!("move spinup");
                                 },
-                                Move::ZoomOut => {
-                                    println!("move zoomout")
-                                },
-                                Move::ZoomIn => {
-                                    println!("move zoomin")
-                                },
                             }
 
-                            ////////// animations below
-                            
-                            // only side animations below
                             let accumulated_rotations = m4::multiply_mat(
                                 m4::x_rotation( deg_to_rad( self.base_x_acc_rotation ).into() ), 
                                 m4::y_rotation( deg_to_rad( self.base_y_acc_rotation ).into() )
                             );
 
-                            let accumulated_rotations_from_decomposed = (
-                                r * Matrix4::from_column_slice(&accumulated_rotations)
-                            )
-                            .try_normalize(std::f32::EPSILON)
-                            .unwrap_or_default();
+                            // math for update normals
+                            // let accumulated_rotations_from_rotated_body = m4::multiply_mat(
+                            //     *updated_body_transformation,
+                            //     m4::multiply_mat(raw_original_transformation, accumulated_rotations) 
+                            // );
                             
-                            accumulated_rotations_for_normal_transformations[2] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
-
-                            // only side animations above
+                            // accumulated_rotations_update_normal_orientation[2] = Some( accumulated_rotations_from_rotated_body );
+                            // math for update normals
+                            
                             let updated_model_matrix = m4::multiply_mat(
                                 original_transformation, 
                                 accumulated_rotations
                             );
 
-                            ////////// animations above
-                                                      
+                            // math for updating the normals
+                            let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                                &updated_model_matrix
+                            )
+                            .try_inverse()
+                            .unwrap()
+                            .transpose();
+
+                            accumulated_rotations_update_normal_orientation[2] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                            // math for updating the normals
+                             
                             animation_models[2] = Some(updated_model_matrix);                         
                             animation_matrix_stack.drain(..); 
                         }
@@ -899,12 +974,32 @@ impl Leg {
                         leg_i 
                     );
 
+                    let raw_original_transformation = self.get_middle_leg_transformation(
+                        m4::identity(), 
+                        leg_part, 
+                        leg_i 
+                    );
+
                     if !self.is_moving {
 
                         animation_models[0] = Some(original_transformation);
                         animation_matrix_stack.push(original_transformation);
-                        accumulated_rotations_for_normal_transformations[0] = Some(m4::identity()); 
+                        
+                        // accumulated_rotations_update_normal_orientation[0] = Some(m4::multiply_mat(
+                        //     m4::identity(), 
+                        //     raw_original_transformation
+                        // ));
 
+                        // math for updating the normals
+                        let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                            &original_transformation
+                        )
+                        .try_inverse()
+                        .unwrap()
+                        .transpose();
+
+                        accumulated_rotations_update_normal_orientation[0] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                        // math for updating the normals
                     } else {
                         match direction {
                             Move::Forward => {
@@ -953,9 +1048,6 @@ impl Leg {
                                     self.switch_upper_side_z_move_cycle();
                                 }     
                             },
-                            Move::Jump => {
-                                println!("move jump!");
-                            },
                             Move::Static => {
                                 println!("no move!");
                             },
@@ -965,15 +1057,8 @@ impl Leg {
                             Move::SpinUp => {
                                 println!("move spinup");
                             },
-                            Move::ZoomOut => {
-                                println!("move zoomout")
-                            },
-                            Move::ZoomIn => {
-                                println!("move zoomin")
-                            },
                         }
     
-                        ////////// animations below
                         let mut updated_model_matrix = m4::translate_3_d( 
                             original_transformation, 
                             m4::translation( 
@@ -993,15 +1078,15 @@ impl Leg {
                             m4::z_rotation( deg_to_rad( self.upper_z_acc_rotation ).into() )
                         );
 
-                        let accumulated_rotations_from_decomposed = (
-                            r * Matrix4::from_column_slice(&accumulated_rotations)
-                        )
-                        .try_normalize(std::f32::EPSILON)
-                        .unwrap_or_default();
+                        // math for update normals
+                        // let accumulated_rotations_from_rotated_body = m4::multiply_mat(
+                        //     *updated_body_transformation,
+                        //     m4::multiply_mat(raw_original_transformation, accumulated_rotations) 
+                        // );
                         
-                        accumulated_rotations_for_normal_transformations[0] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
+                        // accumulated_rotations_update_normal_orientation[0] = Some( accumulated_rotations_from_rotated_body );
+                        // math for update normals
         
-                        // only side animation above
                         updated_model_matrix = m4::multiply_mat(
                             updated_model_matrix, 
                             accumulated_rotations
@@ -1015,7 +1100,17 @@ impl Leg {
                                 (MIDDLE_JOINT_LEG_DEPTH / 2.) * -1.
                             )
                         );
-                        ////////// animations above
+
+                        // math for updating the normals
+                        let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                            &updated_model_matrix
+                        )
+                        .try_inverse()
+                        .unwrap()
+                        .transpose();
+
+                        accumulated_rotations_update_normal_orientation[0] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                        // math for updating the normals
                      
                         animation_models[0] = Some(updated_model_matrix); 
                         animation_matrix_stack.push(updated_model_matrix); 
@@ -1030,10 +1125,31 @@ impl Leg {
                         leg_i 
                     );
 
+                    let raw_original_transformation = self.get_middle_leg_transformation(
+                        m4::identity(), 
+                        leg_part, 
+                        leg_i 
+                    );
+
                     if !self.is_moving {
                         animation_models[leg_part] = Some(original_transformation);
                         animation_matrix_stack.push(original_transformation); 
-                        accumulated_rotations_for_normal_transformations[leg_part] = Some(m4::identity());
+                        
+                        // accumulated_rotations_update_normal_orientation[leg_part] = Some(m4::multiply_mat(
+                        //     m4::identity(), 
+                        //     raw_original_transformation
+                        // ));
+
+                        // math for updating the normals
+                        let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                            &original_transformation
+                        )
+                        .try_inverse()
+                        .unwrap()
+                        .transpose();
+
+                        accumulated_rotations_update_normal_orientation[leg_part] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                        // math for updating the normals
 
                         if leg_part == 2 {
                             animation_matrix_stack.drain(..);
@@ -1050,9 +1166,6 @@ impl Leg {
                                 Move::Right => {
                                     self.joint_z_acc_rotation = self.upper_z_acc_rotation * -1.;
                                 },
-                                Move::Jump => {
-                                    println!("move jump!");
-                                },
                                 Move::Static => {
                                     println!("no move!");
                                 },
@@ -1062,17 +1175,8 @@ impl Leg {
                                 Move::SpinUp => {
                                     println!("move spinup");
                                 },
-                                Move::ZoomOut => {
-                                    println!("move zoomout")
-                                },
-                                Move::ZoomIn => {
-                                    println!("move zoomin")
-                                },
                             }
                             
-                            ////////// animations below
-                            
-                            // only side animations below
                             let mut updated_model_matrix = m4::translate_3_d(
                                 original_transformation, 
                                 m4::translation(
@@ -1087,13 +1191,15 @@ impl Leg {
                                 m4::z_rotation( deg_to_rad( self.joint_z_acc_rotation ).into() ), 
                             );
 
-                            let accumulated_rotations_from_decomposed = (
-                                r * Matrix4::from_column_slice(&accumulated_rotations)
-                            )
-                            .try_normalize(std::f32::EPSILON)
-                            .unwrap_or_default();
+                            // math for update normals
+                            // let accumulated_rotations_from_rotated_body = m4::multiply_mat(
+                            //     *updated_body_transformation,
+                            //     m4::multiply_mat(raw_original_transformation, accumulated_rotations) 
+                            // );
                             
-                            accumulated_rotations_for_normal_transformations[1] = Some(accumulated_rotations_from_decomposed.as_slice().try_into().unwrap());
+                            // accumulated_rotations_update_normal_orientation[1] = Some( accumulated_rotations_from_rotated_body );
+                            // math for update normals
+        
 
                             updated_model_matrix = m4::multiply_mat(
                                 updated_model_matrix, 
@@ -1108,9 +1214,17 @@ impl Leg {
                                     (MIDDLE_JOINT_LEG_DEPTH / 2.) * -1.
                                 )
                             );
-                            // only side animation above
 
-                            ////////// animations above
+                            // math for updating the normals
+                            let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                                &updated_model_matrix
+                            )
+                            .try_inverse()
+                            .unwrap()
+                            .transpose();
+
+                            accumulated_rotations_update_normal_orientation[1] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                            // math for updating the normals
                          
                             animation_models[1] = Some(updated_model_matrix);
                             animation_matrix_stack.push(updated_model_matrix); 
@@ -1127,9 +1241,6 @@ impl Leg {
                                 Move::Right => {
                                     println!("move right!");
                                 },
-                                Move::Jump => {
-                                    println!("move jump!");
-                                },
                                 Move::Static => {
                                     println!("no move!");
                                 },
@@ -1139,37 +1250,39 @@ impl Leg {
                                 Move::SpinUp => {
                                     println!("move spinup");
                                 },
-                                Move::ZoomOut => {
-                                    println!("move zoomout")
-                                },
-                                Move::ZoomIn => {
-                                    println!("move zoomin")
-                                },
                             }
 
-                            let accumulated_rotations = m4::multiply_mat(
-                                m4::identity(), 
-                                r.
-                                try_normalize(std::f32::EPSILON)
-                                .unwrap_or_default()
-                                .as_slice()
-                                .try_into()
-                                .unwrap()
-                            );
+                            // math for update normals
+                            // let accumulated_rotations_from_rotated_body = m4::multiply_mat(
+                            //     *updated_body_transformation,
+                            //     raw_original_transformation
+                            // );
                             
-                            accumulated_rotations_for_normal_transformations[2] = Some( accumulated_rotations );
-                                                           
-                            animation_models[2] = Some(original_transformation);                         
+                            // accumulated_rotations_update_normal_orientation[2] = Some( accumulated_rotations_from_rotated_body );
+                            // math for update normals
+        
+                            // math for updating the normals
+                            let inv_transpose_for_normal_transformation = nalgebra::Matrix4::from_column_slice(
+                                &original_transformation
+                            )
+                            .try_inverse()
+                            .unwrap()
+                            .transpose();
+
+                            accumulated_rotations_update_normal_orientation[2] = Some( inv_transpose_for_normal_transformation.as_slice().try_into().unwrap() );
+                            // math for updating the normals
+
+                            animation_models[2] = Some( original_transformation ); // it is already clamped                        
                             animation_matrix_stack.drain(..); 
                         }
                     }
                 }
             } 
             
-            return (animation_models, accumulated_rotations_for_normal_transformations)
+            return (animation_models, accumulated_rotations_update_normal_orientation)
         }       
             
-        (animation_models, accumulated_rotations_for_normal_transformations)
+        (animation_models, accumulated_rotations_update_normal_orientation)
     }
 
     

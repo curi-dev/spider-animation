@@ -11,7 +11,7 @@ use crate::{
     leg::Leg, 
     gpu_interface::GpuInterface, 
     m4::M4 as m4, 
-    webgl_utils::deg_to_rad, log
+    webgl_utils::deg_to_rad
 };
 
 
@@ -138,7 +138,7 @@ impl Spider {
         ];
         
         Self { 
-            control: SpiderControl::new(&canvas), // CharControl
+            control: SpiderControl::new(&canvas),
             frontal_legs,
             middle_legs,
             back_legs,       
@@ -174,7 +174,8 @@ impl Spider {
         let mut x_acc_translation = 0.;
         let mut y_acc_rotation = 0.;
         let mut x_acc_rotation = 0.;
-        let mut z_acc_translation = 0.;
+        let z_acc_translation = 0.;
+
         if let Move::Forward = *self.control.direction.borrow() {
             self.body_x_acc_translation += 1.; // body default translation
             x_acc_translation = 1.;
@@ -229,7 +230,6 @@ impl Spider {
             }
         }
 
-        // OTHER TYPE OF ANIMATIONS
         if let Move::SpinDown = *self.control.direction.borrow() {
             self.body_x_acc_rotation += 0.1;
             x_acc_rotation = 0.1;
@@ -238,16 +238,6 @@ impl Spider {
         if let Move::SpinUp = *self.control.direction.borrow() {
             self.body_x_acc_rotation -= 0.1;
             x_acc_rotation = -0.1;
-        }
-
-        if let Move::ZoomIn = *self.control.direction.borrow() {
-            self.body_z_acc_translation += 1.;
-            z_acc_translation = 1.;
-        }
-
-        if let Move::ZoomOut = *self.control.direction.borrow() {
-            self.body_z_acc_translation -= 1.;
-            z_acc_translation = -1.;
         }
 
         let rotation_model_mat = m4::multiply_mat(
@@ -278,7 +268,7 @@ impl Spider {
             self.body_data.len() as i32 / 3, 
             Gl::TRIANGLES,
             &final_mat,
-            &transformation_model_mat,
+            &transformation_model_mat, // i am sending translations either
             &light,
             (0.08, 0.08, 0.08)
         );
@@ -299,20 +289,18 @@ impl Spider {
     ) {
         for (i, leg) in self.frontal_legs.iter_mut().enumerate() {   
             
-            let animation_model_matrix = leg.walk_animate(
+            let ( animation_model_matrix, normal_model_matrix ) = leg.walk_animate(
                 &body_model_matrix, // reference
                 &self.control.direction.try_borrow().unwrap(),
                 i,
+                &self.last_pos_model_mat.unwrap() // body transformation matrix before camera and projection
             );
 
-            for (j, model_matrix) in animation_model_matrix.0.iter().enumerate() {                
+            for (j, model_matrix) in animation_model_matrix.iter().enumerate() {                
                 gpu_interface.send_positions_to_gpu(&leg.vertex_data[j], positions_buffer);
-                
                 if i == 2 { // only for base leg 
-                    //gpu_interface.send_colors_to_gpu(&self.base_leg_colors, colors_buffer);
                     gpu_interface.send_normals_to_gpu(&get_leg_base_normals(), normals_buffer);
                 } else {
-                    //gpu_interface.send_colors_to_gpu(&self.colors, colors_buffer);
                     gpu_interface.send_normals_to_gpu(&get_leg_upper_and_joint_normals(), normals_buffer);
                 }
                 
@@ -320,12 +308,11 @@ impl Spider {
                     leg.vertex_data[j].len() as i32 / 3, 
                     Gl::TRIANGLES, 
                     &model_matrix.unwrap(),
-                    &animation_model_matrix.1[j].unwrap(), // unwrap never fails here,
+                    &normal_model_matrix[j].unwrap(), // unwrap never fails here,
                     &light,
                     (0.08, 0.08, 1.)
                 );
-            }
-            
+            }           
         }
     }
 
@@ -343,7 +330,7 @@ impl Spider {
                 &body_model_matrix,
                 &self.control.direction.try_borrow().unwrap(), 
                 i,
-                //&mut self.animation_matrix_stack
+                &self.last_pos_model_mat.unwrap() // body transformation matrix before camera and projection
             );
             
             for (j, model_matrix) in animation_model_matrix.0.iter().enumerate() {                
@@ -383,7 +370,7 @@ impl Spider {
                 &body_model_matrix,
                 &self.control.direction.try_borrow().unwrap(),
                 i,
-                //&mut self.animation_matrix_stack
+                &self.last_pos_model_mat.unwrap() // body transformation matrix before camera and projection
             );
             
             for (j, model_matrix) in animation_model_matrix.0.iter().enumerate() {                

@@ -404,6 +404,10 @@ export function __wbg_createShader_4017d9fbc36659af(arg0, arg1) {
     return isLikeNone(ret) ? 0 : addHeapObject(ret);
 };
 
+export function __wbg_deleteBuffer_6fd9bca7f8a6d9de(arg0, arg1) {
+    getObject(arg0).deleteBuffer(getObject(arg1));
+};
+
 export function __wbg_drawArrays_c0dcb4151e0bf007(arg0, arg1, arg2, arg3) {
     getObject(arg0).drawArrays(arg1 >>> 0, arg2, arg3);
 };
@@ -589,8 +593,8 @@ export function __wbindgen_memory() {
     return addHeapObject(ret);
 };
 
-export function __wbindgen_closure_wrapper339(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 15, __wbg_adapter_16);
+export function __wbindgen_closure_wrapper230(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 17, __wbg_adapter_16);
     return addHeapObject(ret);
 };
 
